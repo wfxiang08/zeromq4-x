@@ -1,4 +1,3 @@
-
 /*
     Copyright (c) 2007-2013 Contributors as noted in the AUTHORS file
 
@@ -22,22 +21,27 @@
 #define __ZMQ_YPIPE_BASE_HPP_INCLUDED__
 
 
-namespace zmq
-{
+namespace zmq {
     // ypipe_base abstracts ypipe and ypipe_conflate specific
     // classes, one is selected according to a the conflate
     // socket option
 
-    template <typename T, int N> class ypipe_base_t
-    {
+    template<typename T, int N>
+    class ypipe_base_t {
     public:
-        virtual ~ypipe_base_t () {}
-        virtual void write (const T &value_, bool incomplete_) = 0;
-        virtual bool unwrite (T *value_) = 0;
-        virtual bool flush () = 0;
-        virtual bool check_read () = 0;
-        virtual bool read (T *value_) = 0;
-        virtual bool probe (bool (*fn)(T &)) = 0;
+        virtual ~ypipe_base_t() { }
+
+        virtual void write(const T &value_, bool incomplete_) = 0;
+
+        virtual bool unwrite(T *value_) = 0;
+
+        virtual bool flush() = 0;
+
+        virtual bool check_read() = 0;
+
+        virtual bool read(T *value_) = 0;
+
+        virtual bool probe(bool (*fn)(T &)) = 0;
     };
 }
 

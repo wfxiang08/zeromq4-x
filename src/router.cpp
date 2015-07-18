@@ -138,9 +138,12 @@ void zmq::router_t::xpipe_terminated (pipe_t *pipe_)
 void zmq::router_t::xread_activated (pipe_t *pipe_)
 {
     std::set <pipe_t*>::iterator it = anonymous_pipes.find (pipe_);
+    // 激活 pipe_
+    // 1. 如果没有找到，则激活
     if (it == anonymous_pipes.end ())
         fq.activated (pipe_);
     else {
+        // 重新attch
         bool identity_ok = identify_peer (pipe_);
         if (identity_ok) {
             anonymous_pipes.erase (it);

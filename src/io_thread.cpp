@@ -24,79 +24,68 @@
 #include "err.hpp"
 #include "ctx.hpp"
 
-zmq::io_thread_t::io_thread_t (ctx_t *ctx_, uint32_t tid_) :
-    object_t (ctx_, tid_)
-{
-    poller = new (std::nothrow) poller_t;
+zmq::io_thread_t::io_thread_t(ctx_t *ctx_, uint32_t tid_) :
+        object_t(ctx_, tid_) {
+    poller = new(std::nothrow) poller_t;
     alloc_assert (poller);
 
-    mailbox_handle = poller->add_fd (mailbox.get_fd (), this);
-    poller->set_pollin (mailbox_handle);
+    mailbox_handle = poller->add_fd(mailbox.get_fd(), this);
+    poller->set_pollin(mailbox_handle);
 }
 
-zmq::io_thread_t::~io_thread_t ()
-{
+zmq::io_thread_t::~io_thread_t() {
     delete poller;
 }
 
-void zmq::io_thread_t::start ()
-{
+void zmq::io_thread_t::start() {
     //  Start the underlying I/O thread.
-    poller->start ();
+    poller->start();
 }
 
-void zmq::io_thread_t::stop ()
-{
-    send_stop ();
+void zmq::io_thread_t::stop() {
+    send_stop();
 }
 
-zmq::mailbox_t *zmq::io_thread_t::get_mailbox ()
-{
+zmq::mailbox_t *zmq::io_thread_t::get_mailbox() {
     return &mailbox;
 }
 
-int zmq::io_thread_t::get_load ()
-{
-    return poller->get_load ();
+int zmq::io_thread_t::get_load() {
+    return poller->get_load();
 }
 
-void zmq::io_thread_t::in_event ()
-{
+void zmq::io_thread_t::in_event() {
     //  TODO: Do we want to limit number of commands I/O thread can
     //  process in a single go?
 
     command_t cmd;
-    int rc = mailbox.recv (&cmd, 0);
+    int rc = mailbox.recv(&cmd, 0);
 
     while (rc == 0 || errno == EINTR) {
         if (rc == 0)
-            cmd.destination->process_command (cmd);
-        rc = mailbox.recv (&cmd, 0);
+            cmd.destination->process_command(cmd);
+        rc = mailbox.recv(&cmd, 0);
     }
 
     errno_assert (rc != 0 && errno == EAGAIN);
 }
 
-void zmq::io_thread_t::out_event ()
-{
+void zmq::io_thread_t::out_event() {
     //  We are never polling for POLLOUT here. This function is never called.
     zmq_assert (false);
 }
 
-void zmq::io_thread_t::timer_event (int)
-{
+void zmq::io_thread_t::timer_event(int) {
     //  No timers here. This function is never called.
     zmq_assert (false);
 }
 
-zmq::poller_t *zmq::io_thread_t::get_poller ()
-{
+zmq::poller_t *zmq::io_thread_t::get_poller() {
     zmq_assert (poller);
     return poller;
 }
 
-void zmq::io_thread_t::process_stop ()
-{
-    poller->rm_fd (mailbox_handle);
-    poller->stop ();
+void zmq::io_thread_t::process_stop() {
+    poller->rm_fd(mailbox_handle);
+    poller->stop();
 }

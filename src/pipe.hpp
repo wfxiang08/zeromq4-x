@@ -28,10 +28,10 @@
 #include "array.hpp"
 #include "blob.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     class object_t;
+
     class pipe_t;
 
     //  Create a pipepair for bi-directional transfer of messages.
@@ -42,17 +42,19 @@ namespace zmq
     //  terminates straight away.
     //  If conflate is true, only the most recently arrived message could be
     //  read (older messages are discarded)
-    int pipepair (zmq::object_t *parents_ [2], zmq::pipe_t* pipes_ [2],
-        int hwms_ [2], bool conflate_ [2]);
+    int pipepair(zmq::object_t *parents_[2], zmq::pipe_t *pipes_[2],
+                 int hwms_[2], bool conflate_[2]);
 
-    struct i_pipe_events
-    {
-        virtual ~i_pipe_events () {}
+    struct i_pipe_events {
+        virtual ~i_pipe_events() { }
 
-        virtual void read_activated (zmq::pipe_t *pipe_) = 0;
-        virtual void write_activated (zmq::pipe_t *pipe_) = 0;
-        virtual void hiccuped (zmq::pipe_t *pipe_) = 0;
-        virtual void pipe_terminated (zmq::pipe_t *pipe_) = 0;
+        virtual void read_activated(zmq::pipe_t *pipe_) = 0;
+
+        virtual void write_activated(zmq::pipe_t *pipe_) = 0;
+
+        virtual void hiccuped(zmq::pipe_t *pipe_) = 0;
+
+        virtual void pipe_terminated(zmq::pipe_t *pipe_) = 0;
     };
 
     //  Note that pipe can be stored in three different arrays.
@@ -60,89 +62,99 @@ namespace zmq
     //  the generic array of pipes to deallocate (3).
 
     class pipe_t :
-        public object_t,
-        public array_item_t <1>,
-        public array_item_t <2>,
-        public array_item_t <3>
-    {
+            public object_t,
+            public array_item_t<1>,
+            public array_item_t<2>,
+            public array_item_t<3> {
         //  This allows pipepair to create pipe objects.
-        friend int pipepair (zmq::object_t *parents_ [2], zmq::pipe_t* pipes_ [2],
-            int hwms_ [2], bool conflate_ [2]);
-            
+        friend int pipepair(zmq::object_t *parents_[2], zmq::pipe_t *pipes_[2],
+                            int hwms_[2], bool conflate_[2]);
+
     public:
 
         //  Specifies the object to send events to.
-        void set_event_sink (i_pipe_events *sink_);
+        void set_event_sink(i_pipe_events *sink_);
 
         //  Pipe endpoint can store an opaque ID to be used by its clients.
-        void set_identity (const blob_t &identity_);
-        blob_t get_identity ();
+        void set_identity(const blob_t &identity_);
+
+        blob_t get_identity();
 
         //  Returns true if there is at least one message to read in the pipe.
-        bool check_read ();
+        bool check_read();
 
         //  Reads a message to the underlying pipe.
-        bool read (msg_t *msg_);
+        bool read(msg_t *msg_);
 
         //  Checks whether messages can be written to the pipe. If writing
         //  the message would cause high watermark the function returns false.
-        bool check_write ();
+        bool check_write();
 
         //  Writes a message to the underlying pipe. Returns false if the
         //  message cannot be written because high watermark was reached.
-        bool write (msg_t *msg_);
+        bool write(msg_t *msg_);
 
         //  Remove unfinished parts of the outbound message from the pipe.
-        void rollback ();
+        void rollback();
 
         //  Flush the messages downsteam.
-        void flush ();
+        void flush();
 
         //  Temporaraily disconnects the inbound message stream and drops
         //  all the messages on the fly. Causes 'hiccuped' event to be generated
         //  in the peer.
-        void hiccup ();
-        
+        void hiccup();
+
         // Ensure the pipe wont block on receiving pipe_term.
-        void set_nodelay ();
+        void set_nodelay();
 
         //  Ask pipe to terminate. The termination will happen asynchronously
         //  and user will be notified about actual deallocation by 'terminated'
         //  event. If delay is true, the pending messages will be processed
         //  before actual shutdown.
-        void terminate (bool delay_);
+        void terminate(bool delay_);
 
         // set the high water marks.
-        void set_hwms (int inhwm_, int outhwm_);
+        void set_hwms(int inhwm_, int outhwm_);
 
     private:
 
+        // pipe的block的大小定义为: 256
         //  Type of the underlying lock-free pipe.
-        typedef ypipe_base_t <msg_t, message_pipe_granularity> upipe_t;
+        // 只是一个简单的quque
+        //
+        typedef ypipe_base_t<msg_t, message_pipe_granularity> upipe_t;
 
         //  Command handlers.
-        void process_activate_read ();
-        void process_activate_write (uint64_t msgs_read_);
-        void process_hiccup (void *pipe_);
-        void process_pipe_term ();
-        void process_pipe_term_ack ();
+        void process_activate_read();
+
+        void process_activate_write(uint64_t msgs_read_);
+
+        void process_hiccup(void *pipe_);
+
+        void process_pipe_term();
+
+        void process_pipe_term_ack();
 
         //  Handler for delimiter read from the pipe.
-        void process_delimiter ();
+        void process_delimiter();
 
         //  Constructor is private. Pipe can only be created using
         //  pipepair function.
-        pipe_t (object_t *parent_, upipe_t *inpipe_, upipe_t *outpipe_,
-            int inhwm_, int outhwm_, bool conflate_);
+        pipe_t(object_t *parent_, upipe_t *inpipe_, upipe_t *outpipe_,
+               int inhwm_, int outhwm_, bool conflate_);
 
         //  Pipepair uses this function to let us know about
         //  the peer pipe object.
-        void set_peer (pipe_t *pipe_);
+        void set_peer(pipe_t *pipe_);
 
         //  Destructor is private. Pipe objects destroy themselves.
-        ~pipe_t ();
+        ~pipe_t();
 
         //  Underlying pipes for both directions.
+        // 就是两个不同的队列
+        // write/read就是从队列中读取数据
+        //
         upipe_t *inpipe;
         upipe_t *outpipe;
 
@@ -199,16 +211,17 @@ namespace zmq
         blob_t identity;
 
         //  Returns true if the message is delimiter; false otherwise.
-        static bool is_delimiter (msg_t &msg_);
+        static bool is_delimiter(msg_t &msg_);
 
         //  Computes appropriate low watermark from the given high watermark.
-        static int compute_lwm (int hwm_);
+        static int compute_lwm(int hwm_);
 
         bool conflate;
 
         //  Disable copying.
-        pipe_t (const pipe_t&);
-        const pipe_t &operator = (const pipe_t&);
+        pipe_t(const pipe_t &);
+
+        const pipe_t &operator=(const pipe_t &);
     };
 
 }

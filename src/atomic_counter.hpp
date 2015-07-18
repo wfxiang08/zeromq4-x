@@ -49,36 +49,30 @@
 #include <arch/atomic.h>
 #endif
 
-namespace zmq
-{
+namespace zmq {
 
     //  This class represents an integer that can be incremented/decremented
     //  in atomic fashion.
 
-    class atomic_counter_t
-    {
+    class atomic_counter_t {
     public:
 
         typedef uint32_t integer_t;
 
-        inline atomic_counter_t (integer_t value_ = 0) :
-            value (value_)
-        {
+        inline atomic_counter_t(integer_t value_ = 0) :
+                value(value_) {
         }
 
-        inline ~atomic_counter_t ()
-        {
+        inline ~atomic_counter_t() {
         }
 
         //  Set counter value (not thread-safe).
-        inline void set (integer_t value_)
-        {
+        inline void set(integer_t value_) {
             value = value_;
         }
 
         //  Atomic addition. Returns the old value.
-        inline integer_t add (integer_t increment_)
-        {
+        inline integer_t add(integer_t increment_) {
             integer_t old_value;
 
 #if defined ZMQ_ATOMIC_COUNTER_WINDOWS
@@ -90,10 +84,10 @@ namespace zmq
 	    old_value = arch_atomic_add (&value, increment_);
 #elif defined ZMQ_ATOMIC_COUNTER_X86
             __asm__ volatile (
-                "lock; xadd %0, %1 \n\t"
-                : "=r" (old_value), "=m" (value)
-                : "0" (increment_), "m" (value)
-                : "cc", "memory");
+            "lock; xadd %0, %1 \n\t"
+            : "=r" (old_value), "=m" (value)
+            : "0" (increment_), "m" (value)
+            : "cc", "memory");
 #elif defined ZMQ_ATOMIC_COUNTER_ARM
             integer_t flag, tmp;
             __asm__ volatile (
@@ -119,8 +113,7 @@ namespace zmq
         }
 
         //  Atomic subtraction. Returns false if the counter drops to zero.
-        inline bool sub (integer_t decrement)
-        {
+        inline bool sub(integer_t decrement) {
 #if defined ZMQ_ATOMIC_COUNTER_WINDOWS
             LONG delta = - ((LONG) decrement);
             integer_t old = InterlockedExchangeAdd ((LONG*) &value, delta);
@@ -137,9 +130,9 @@ namespace zmq
             integer_t oldval = -decrement;
             volatile integer_t *val = &value;
             __asm__ volatile ("lock; xaddl %0,%1"
-                : "=r" (oldval), "=m" (*val)
-                : "0" (oldval), "m" (*val)
-                : "cc", "memory");
+            : "=r" (oldval), "=m" (*val)
+            : "0" (oldval), "m" (*val)
+            : "cc", "memory");
             return oldval != decrement;
 #elif defined ZMQ_ATOMIC_COUNTER_ARM
             integer_t old_value, flag, tmp;
@@ -166,8 +159,7 @@ namespace zmq
 #endif
         }
 
-        inline integer_t get ()
-        {
+        inline integer_t get() {
             return value;
         }
 
@@ -178,8 +170,9 @@ namespace zmq
         mutex_t sync;
 #endif
 
-        atomic_counter_t (const atomic_counter_t&);
-        const atomic_counter_t& operator = (const atomic_counter_t&);
+        atomic_counter_t(const atomic_counter_t &);
+
+        const atomic_counter_t &operator=(const atomic_counter_t &);
     };
 
 }

@@ -23,37 +23,42 @@
 #include "array.hpp"
 #include "pipe.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     //  This class manages a set of outbound pipes. On send it load balances
     //  messages fairly among the pipes.
 
-    class lb_t
-    {
+    // 注意几个概念:
+    // 1. load balance
+    // 2. pipes
+    //    如何通过pipe可靠地传输消息
+    class lb_t {
     public:
 
-        lb_t ();
-        ~lb_t ();
+        lb_t();
 
-        void attach (pipe_t *pipe_);
-        void activated (pipe_t *pipe_);
-        void pipe_terminated (pipe_t *pipe_);
+        ~lb_t();
 
-        int send (msg_t *msg_);
+        void attach(pipe_t *pipe_);
+
+        void activated(pipe_t *pipe_);
+
+        void pipe_terminated(pipe_t *pipe_);
+
+        int send(msg_t *msg_);
 
         //  Sends a message and stores the pipe that was used in pipe_.
         //  It is possible for this function to return success but keep pipe_
         //  unset if the rest of a multipart message to a terminated pipe is
         //  being dropped. For the first frame, this will never happen.
-        int sendpipe (msg_t *msg_, pipe_t **pipe_);
+        int sendpipe(msg_t *msg_, pipe_t **pipe_);
 
-        bool has_out ();
+        bool has_out();
 
     private:
 
         //  List of outbound pipes.
-        typedef array_t <pipe_t, 2> pipes_t;
+        typedef array_t<pipe_t, 2> pipes_t;
         pipes_t pipes;
 
         //  Number of active pipes. All the active pipes are located at the
@@ -69,8 +74,9 @@ namespace zmq
         //  True if we are dropping current message.
         bool dropping;
 
-        lb_t (const lb_t&);
-        const lb_t &operator = (const lb_t&);
+        lb_t(const lb_t &);
+
+        const lb_t &operator=(const lb_t &);
     };
 
 }

@@ -25,16 +25,14 @@
 #include <string>
 #include <sstream>
 
-zmq::address_t::address_t (
-    const std::string &protocol_, const std::string &address_)
-    : protocol (protocol_),
-      address (address_)
-{
-    memset (&resolved, 0, sizeof (resolved));
+zmq::address_t::address_t(
+        const std::string &protocol_, const std::string &address_)
+        : protocol(protocol_),
+          address(address_) {
+    memset(&resolved, 0, sizeof(resolved));
 }
 
-zmq::address_t::~address_t ()
-{
+zmq::address_t::~address_t() {
     if (protocol == "tcp") {
         if (resolved.tcp_addr) {
             delete resolved.tcp_addr;
@@ -42,8 +40,7 @@ zmq::address_t::~address_t ()
         }
     }
 #if !defined ZMQ_HAVE_WINDOWS && !defined ZMQ_HAVE_OPENVMS
-    else
-    if (protocol == "ipc") {
+    else if (protocol == "ipc") {
         if (resolved.ipc_addr) {
             delete resolved.ipc_addr;
             resolved.ipc_addr = 0;
@@ -52,26 +49,24 @@ zmq::address_t::~address_t ()
 #endif
 }
 
-int zmq::address_t::to_string (std::string &addr_) const
-{
+int zmq::address_t::to_string(std::string &addr_) const {
     if (protocol == "tcp") {
         if (resolved.tcp_addr)
             return resolved.tcp_addr->to_string(addr_);
     }
 #if !defined ZMQ_HAVE_WINDOWS && !defined ZMQ_HAVE_OPENVMS
-    else
-    if (protocol == "ipc") {
+    else if (protocol == "ipc") {
         if (resolved.ipc_addr)
             return resolved.ipc_addr->to_string(addr_);
     }
 #endif
 
-    if (!protocol.empty () && !address.empty ()) {
+    if (!protocol.empty() && !address.empty()) {
         std::stringstream s;
         s << protocol << "://" << address;
-        addr_ = s.str ();
+        addr_ = s.str();
         return 0;
     }
-    addr_.clear ();
+    addr_.clear();
     return -1;
 }

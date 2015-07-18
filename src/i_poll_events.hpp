@@ -16,30 +16,31 @@
     You should have received a copy of the GNU Lesser General Public License
     along with this program. If not, see <http://www.gnu.org/licenses/>.
 */
- 
+
 #ifndef __ZMQ_I_POLL_EVENTS_HPP_INCLUDED__
 #define __ZMQ_I_POLL_EVENTS_HPP_INCLUDED__
- 
-namespace zmq
-{
- 
+
+namespace zmq {
+
     // Virtual interface to be exposed by object that want to be notified
     // about events on file descriptors.
- 
-    struct i_poll_events
-    {
-        virtual ~i_poll_events () {}
- 
+
+    struct i_poll_events {
+        virtual ~i_poll_events() { }
+
+        // 什么状态才算时 ready for reading呢?
+        // 在网络传输中 ready for reading 是否意味着数据已经全部到了?
+        // 还是对方做好接受的准备了
         // Called by I/O thread when file descriptor is ready for reading.
-        virtual void in_event () = 0;
- 
+        virtual void in_event() = 0;
+
         // Called by I/O thread when file descriptor is ready for writing.
-        virtual void out_event () = 0;
- 
+        virtual void out_event() = 0;
+
         // Called when timer expires.
-        virtual void timer_event (int id_) = 0;
+        virtual void timer_event(int id_) = 0;
     };
- 
+
 }
- 
+
 #endif

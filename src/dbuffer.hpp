@@ -27,14 +27,13 @@
 #include "mutex.hpp"
 #include "msg.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     //  dbuffer is a single-producer single-consumer double-buffer
     //  implementation.
     //
     //  The producer writes to a back buffer and then tries to swap
-    //  pointers between the back and front buffers. If it fails,
+    //  pointers between the back and front buffers. If it fails, (只有拿锁失败时，才放弃)
     //  due to the consumer reading from the front buffer, it just
     //  gives up, which is ok since writes are many and redundant.
     //
@@ -44,59 +43,56 @@ namespace zmq
     //  value written, it is used by ypipe_conflate to mimic ypipe
     //  functionality regarding a reader being asleep
 
-    template <typename T> class dbuffer_t;
+    template<typename T>
+    class dbuffer_t;
 
-    template <> class dbuffer_t<msg_t>
-    {
+    template<>
+    class dbuffer_t<msg_t> {
     public:
 
-        inline dbuffer_t ()
-            : back (&storage[0])
-            , front (&storage[1])
-            , has_msg (false)
-        {
-            back->init ();
-            front->init ();
+        inline dbuffer_t()
+                : back(&storage[0]), front(&storage[1]), has_msg(false) {
+            back->init();
+            front->init();
         }
 
-        inline ~dbuffer_t()
-        {
-            back->close ();
-            front->close ();
+        inline ~dbuffer_t() {
+            back->close();
+            front->close();
         }
 
-        inline void write (const msg_t &value_)
-        {
-            msg_t& xvalue = const_cast<msg_t&>(value_);
+        inline void write(const msg_t &value_) {
+            msg_t &xvalue = const_cast<msg_t &>(value_);
 
-            zmq_assert (xvalue.check ());
-            back->move (xvalue);    // cannot just overwrite, might leak
+            zmq_assert (xvalue.check());
 
-            zmq_assert (back->check ());
+            // 1. 将数据从xvalue写入到back中
+            back->move(xvalue);    // cannot just overwrite, might leak
 
-            if (sync.try_lock ())
-            {
-                std::swap (back, front);
+            zmq_assert (back->check());
+
+            // 2. 将back/front切换，并且标记有数据
+            if (sync.try_lock()) {
+                std::swap(back, front);
                 has_msg = true;
 
-                sync.unlock ();
+                sync.unlock();
             }
         }
 
-        inline bool read (msg_t *value_)
-        {
+        inline bool read(msg_t *value_) {
             if (!value_)
                 return false;
-
-            {
-                scoped_lock_t lock (sync);
+            else {
+                scoped_lock_t lock(sync);
                 if (!has_msg)
                     return false;
 
-                zmq_assert (front->check ());
+                zmq_assert (front->check());
 
+                // 读取front的数据, 并且重置front
                 *value_ = *front;
-                front->init ();     // avoid double free
+                front->init();     // avoid double free
 
                 has_msg = false;
                 return true;
@@ -104,17 +100,18 @@ namespace zmq
         }
 
 
-        inline bool check_read ()
-        {
-            scoped_lock_t lock (sync);
+        //
+        // 如果有消息，就能 read
+        //
+        inline bool check_read() {
+            scoped_lock_t lock(sync);
 
             return has_msg;
         }
 
-        inline bool probe (bool (*fn)(msg_t &))
-        {
-            scoped_lock_t lock (sync);
-            return (*fn) (*front);
+        inline bool probe(bool (*fn)(msg_t &)) {
+            scoped_lock_t lock(sync);
+            return (*fn)(*front);
         }
 
 
@@ -126,8 +123,9 @@ namespace zmq
         bool has_msg;
 
         //  Disable copying of dbuffer.
-        dbuffer_t (const dbuffer_t&);
-        const dbuffer_t &operator = (const dbuffer_t&);
+        dbuffer_t(const dbuffer_t &);
+
+        const dbuffer_t &operator=(const dbuffer_t &);
     };
 }
 

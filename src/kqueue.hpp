@@ -22,7 +22,7 @@
 
 //  poller.hpp decides which polling mechanism to use.
 #include "poller.hpp"
-#if defined ZMQ_USE_KQUEUE
+
 
 #include <vector>
 #include <unistd.h>
@@ -31,62 +31,69 @@
 #include "thread.hpp"
 #include "poller_base.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     struct i_poll_events;
 
     //  Implements socket polling mechanism using the BSD-specific
     //  kqueue interface.
 
-    class kqueue_t : public poller_base_t
-    {
+    class kqueue_t : public poller_base_t {
     public:
 
-        typedef void* handle_t;
+        typedef void *handle_t;
 
-        kqueue_t ();
-        ~kqueue_t ();
+        kqueue_t();
+
+        ~kqueue_t();
 
         //  "poller" concept.
-        handle_t add_fd (fd_t fd_, zmq::i_poll_events *events_);
-        void rm_fd (handle_t handle_);
-        void set_pollin (handle_t handle_);
-        void reset_pollin (handle_t handle_);
-        void set_pollout (handle_t handle_);
-        void reset_pollout (handle_t handle_);
-        void start ();
-        void stop ();
+        handle_t add_fd(fd_t fd_, zmq::i_poll_events *events_);
 
-        static int max_fds ();
+        void rm_fd(handle_t handle_);
+
+        void set_pollin(handle_t handle_);
+
+        void reset_pollin(handle_t handle_);
+
+        void set_pollout(handle_t handle_);
+
+        void reset_pollout(handle_t handle_);
+
+        void start();
+
+        void stop();
+
+        static int max_fds();
 
     private:
 
         //  Main worker thread routine.
-        static void worker_routine (void *arg_);
+        static void worker_routine(void *arg_);
 
         //  Main event loop.
-        void loop ();
+        void loop();
 
+        // 注意：
+        // 如何通过io_thread来控制一定数量的 fid, 关键在于: kqueue_fd, 一个Poller对应一个kqueue_fd, 负责监控一批文件描述符
         //  File descriptor referring to the kernel event queue.
         fd_t kqueue_fd;
 
         //  Adds the event to the kqueue.
-        void kevent_add (fd_t fd_, short filter_, void *udata_);
+        void kevent_add(fd_t fd_, short filter_, void *udata_);
 
         //  Deletes the event from the kqueue.
-        void kevent_delete (fd_t fd_, short filter_);
+        void kevent_delete(fd_t fd_, short filter_);
 
-        struct poll_entry_t
-        {
+        struct poll_entry_t {
             fd_t fd;
-            bool flag_pollin;
-            bool flag_pollout;
+            bool flag_pollin; // 是否 监听 READ Event
+            bool flag_pollout; // 是否 监听 Write Event
             zmq::i_poll_events *reactor;
         };
 
         //  List of retired event sources.
-        typedef std::vector <poll_entry_t*> retired_t;
+        typedef std::vector<poll_entry_t *> retired_t;
         retired_t retired;
 
         //  If true, thread is in the process of shutting down.
@@ -95,19 +102,14 @@ namespace zmq
         //  Handle of the physical thread doing the I/O work.
         thread_t worker;
 
-        kqueue_t (const kqueue_t&);
-        const kqueue_t &operator = (const kqueue_t&);
+        kqueue_t(const kqueue_t &);
 
-#ifdef HAVE_FORK
-        // the process that created this context. Used to detect forking.
-        pid_t pid;
-#endif
+        const kqueue_t &operator=(const kqueue_t &);
+        
     };
 
     typedef kqueue_t poller_t;
 
 }
-
-#endif
 
 #endif

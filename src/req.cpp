@@ -50,6 +50,7 @@ int zmq::req_t::xsend (msg_t *msg_)
             return -1;
         }
 
+        // 如果不是 strict, 则终结 reply_pipe, 开始一个新的 message
         if (reply_pipe)
             reply_pipe->terminate (false);
         receiving_reply = false;

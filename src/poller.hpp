@@ -21,60 +21,63 @@
 #define __ZMQ_POLLER_HPP_INCLUDED__
 
 #include "platform.hpp"
+#define ZMQ_USE_KQUEUE
+#include "kqueue.hpp"
 
-#if defined ZMQ_FORCE_SELECT
-#define ZMQ_USE_SELECT
-#include "select.hpp"
-#elif defined ZMQ_FORCE_POLL
-#define ZMQ_USE_POLL
-#include "poll.hpp"
-#elif defined ZMQ_FORCE_EPOLL
-#define ZMQ_USE_EPOLL
-#include "epoll.hpp"
-#elif defined ZMQ_FORCE_DEVPOLL
-#define ZMQ_USE_DEVPOLL
-#include "devpoll.hpp"
-#elif defined ZMQ_FORCE_KQUEUE
-#define ZMQ_USE_KQUEUE
-#include "kqueue.hpp"
-#elif defined ZMQ_HAVE_LINUX
-#define ZMQ_USE_EPOLL
-#include "epoll.hpp"
-#elif defined ZMQ_HAVE_WINDOWS
-#define ZMQ_USE_SELECT
-#include "select.hpp"
-#elif defined ZMQ_HAVE_FREEBSD
-#define ZMQ_USE_KQUEUE
-#include "kqueue.hpp"
-#elif defined ZMQ_HAVE_OPENBSD
-#define ZMQ_USE_KQUEUE
-#include "kqueue.hpp"
-#elif defined ZMQ_HAVE_NETBSD
-#define ZMQ_USE_KQUEUE
-#include "kqueue.hpp"
-#elif defined ZMQ_HAVE_SOLARIS
-#define ZMQ_USE_DEVPOLL
-#include "devpoll.hpp"
-#elif defined ZMQ_HAVE_OSX
-#define ZMQ_USE_KQUEUE
-#include "kqueue.hpp"
-#elif defined ZMQ_HAVE_QNXNTO
-#define ZMQ_USE_POLL
-#include "poll.hpp"
-#elif defined ZMQ_HAVE_AIX
-#define ZMQ_USE_POLL
-#include "poll.hpp"
-#elif defined ZMQ_HAVE_HPUX
-#define ZMQ_USE_DEVPOLL
-#include "devpoll.hpp"
-#elif defined ZMQ_HAVE_OPENVMS
-#define ZMQ_USE_SELECT
-#include "select.hpp"
-#elif defined ZMQ_HAVE_CYGWIN
-#define ZMQ_USE_SELECT
-#include "select.hpp"
-#else
-#error Unsupported platform
-#endif
+//
+//#if defined ZMQ_FORCE_SELECT
+//#define ZMQ_USE_SELECT
+//#include "select.hpp"
+//#elif defined ZMQ_FORCE_POLL
+//#define ZMQ_USE_POLL
+//#include "poll.hpp"
+//#elif defined ZMQ_FORCE_EPOLL
+//#define ZMQ_USE_EPOLL
+//#include "epoll.hpp"
+//#elif defined ZMQ_FORCE_DEVPOLL
+//#define ZMQ_USE_DEVPOLL
+//#include "devpoll.hpp"
+//#elif defined ZMQ_FORCE_KQUEUE
+//#define ZMQ_USE_KQUEUE
+//#include "kqueue.hpp"
+//#elif defined ZMQ_HAVE_LINUX
+//#define ZMQ_USE_EPOLL
+//#include "epoll.hpp"
+//#elif defined ZMQ_HAVE_WINDOWS
+//#define ZMQ_USE_SELECT
+//#include "select.hpp"
+//#elif defined ZMQ_HAVE_FREEBSD
+//#define ZMQ_USE_KQUEUE
+//#include "kqueue.hpp"
+//#elif defined ZMQ_HAVE_OPENBSD
+//#define ZMQ_USE_KQUEUE
+//#include "kqueue.hpp"
+//#elif defined ZMQ_HAVE_NETBSD
+//#define ZMQ_USE_KQUEUE
+//#include "kqueue.hpp"
+//#elif defined ZMQ_HAVE_SOLARIS
+//#define ZMQ_USE_DEVPOLL
+//#include "devpoll.hpp"
+//#elif defined ZMQ_HAVE_OSX
+//#define ZMQ_USE_KQUEUE
+//#include "kqueue.hpp"
+//#elif defined ZMQ_HAVE_QNXNTO
+//#define ZMQ_USE_POLL
+//#include "poll.hpp"
+//#elif defined ZMQ_HAVE_AIX
+//#define ZMQ_USE_POLL
+//#include "poll.hpp"
+//#elif defined ZMQ_HAVE_HPUX
+//#define ZMQ_USE_DEVPOLL
+//#include "devpoll.hpp"
+//#elif defined ZMQ_HAVE_OPENVMS
+//#define ZMQ_USE_SELECT
+//#include "select.hpp"
+//#elif defined ZMQ_HAVE_CYGWIN
+//#define ZMQ_USE_SELECT
+//#include "select.hpp"
+//#else
+//#error Unsupported platform
+//#endif
 
 #endif

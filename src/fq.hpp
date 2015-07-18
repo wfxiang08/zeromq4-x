@@ -24,32 +24,37 @@
 #include "pipe.hpp"
 #include "msg.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     //  Class manages a set of inbound pipes. On receive it performs fair
     //  queueing so that senders gone berserk won't cause denial of
     //  service for decent senders.
 
-    class fq_t
-    {
+    // 队列: fair_queue
+    //      load balance quque的区别
+    class fq_t {
     public:
 
-        fq_t ();
-        ~fq_t ();
+        fq_t();
 
-        void attach (pipe_t *pipe_);
-        void activated (pipe_t *pipe_);
-        void pipe_terminated (pipe_t *pipe_);
+        ~fq_t();
 
-        int recv (msg_t *msg_);
-        int recvpipe (msg_t *msg_, pipe_t **pipe_);
-        bool has_in ();
+        void attach(pipe_t *pipe_);
+
+        void activated(pipe_t *pipe_);
+
+        void pipe_terminated(pipe_t *pipe_);
+
+        int recv(msg_t *msg_);
+
+        int recvpipe(msg_t *msg_, pipe_t **pipe_);
+
+        bool has_in();
 
     private:
 
         //  Inbound pipes.
-        typedef array_t <pipe_t, 1> pipes_t;
+        typedef array_t<pipe_t, 1> pipes_t;
         pipes_t pipes;
 
         //  Number of active pipes. All the active pipes are located at the
@@ -63,8 +68,9 @@ namespace zmq
         //  there are following parts still waiting in the current pipe.
         bool more;
 
-        fq_t (const fq_t&);
-        const fq_t &operator = (const fq_t&);
+        fq_t(const fq_t &);
+
+        const fq_t &operator=(const fq_t &);
     };
 
 }

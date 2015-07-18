@@ -86,54 +86,58 @@ int zmq::proxy (
 
     while (state != terminated) {
         //  Wait while there are either requests or replies to process.
+        // poll所有的输入，怎么没有timeout呢?
         rc = zmq_poll (&items [0], qt_poll_items, -1);
         if (unlikely (rc < 0))
             return -1;
 
-        //  Process a control command if any
-        if (control_ && items [2].revents & ZMQ_POLLIN) {
-            rc = control_->recv (&msg, 0);
-            if (unlikely (rc < 0))
-                return -1;
-
-            moresz = sizeof more;
-            rc = control_->getsockopt (ZMQ_RCVMORE, &more, &moresz);
-            if (unlikely (rc < 0) || more)
-                return -1;
-
-            //  Copy message to capture socket if any
-            if (capture_) {
-                msg_t ctrl;
-                int rc = ctrl.init ();
-                if (unlikely (rc < 0))
-                    return -1;
-                rc = ctrl.copy (msg);
-                if (unlikely (rc < 0))
-                    return -1;
-                rc = capture_->send (&ctrl, more? ZMQ_SNDMORE: 0);
-                if (unlikely (rc < 0))
-                    return -1;
-            }
-
-            if (msg.size () == 5 && memcmp (msg.data (), "PAUSE", 5) == 0)
-                state = paused;
-            else
-            if (msg.size () == 6 && memcmp (msg.data (), "RESUME", 6) == 0)
-                state = active;
-            else
-            if (msg.size () == 9 && memcmp (msg.data (), "TERMINATE", 9) == 0)
-                state = terminated;
-            else {
-                //  This is an API error, we should assert
-                puts ("E: invalid command sent to proxy");
-                zmq_assert (false);
-            }
-        }
+//        //  Process a control command if any
+//        if (control_ && items [2].revents & ZMQ_POLLIN) {
+//            rc = control_->recv (&msg, 0);
+//            if (unlikely (rc < 0))
+//                return -1;
+//
+//            moresz = sizeof more;
+//            rc = control_->getsockopt (ZMQ_RCVMORE, &more, &moresz);
+//            if (unlikely (rc < 0) || more)
+//                return -1;
+//
+//            //  Copy message to capture socket if any
+//            if (capture_) {
+//                msg_t ctrl;
+//                int rc = ctrl.init ();
+//                if (unlikely (rc < 0))
+//                    return -1;
+//                rc = ctrl.copy (msg);
+//                if (unlikely (rc < 0))
+//                    return -1;
+//                rc = capture_->send (&ctrl, more? ZMQ_SNDMORE: 0);
+//                if (unlikely (rc < 0))
+//                    return -1;
+//            }
+//
+//            if (msg.size () == 5 && memcmp (msg.data (), "PAUSE", 5) == 0)
+//                state = paused;
+//            else
+//            if (msg.size () == 6 && memcmp (msg.data (), "RESUME", 6) == 0)
+//                state = active;
+//            else
+//            if (msg.size () == 9 && memcmp (msg.data (), "TERMINATE", 9) == 0)
+//                state = terminated;
+//            else {
+//                //  This is an API error, we should assert
+//                puts ("E: invalid command sent to proxy");
+//                zmq_assert (false);
+//            }
+//        }
+        
+        // 通过front有输入，并且backend有输出，则
         //  Process a request
         if (state == active
         &&  items [0].revents & ZMQ_POLLIN
         &&  items [1].revents & ZMQ_POLLOUT) {
             while (true) {
+                // msg经过初始化
                 rc = frontend_->recv (&msg, 0);
                 if (unlikely (rc < 0))
                     return -1;
@@ -143,19 +147,20 @@ int zmq::proxy (
                 if (unlikely (rc < 0))
                     return -1;
 
-                //  Copy message to capture socket if any
-                if (capture_) {
-                    msg_t ctrl;
-                    rc = ctrl.init ();
-                    if (unlikely (rc < 0))
-                        return -1;
-                    rc = ctrl.copy (msg);
-                    if (unlikely (rc < 0))
-                        return -1;
-                    rc = capture_->send (&ctrl, more? ZMQ_SNDMORE: 0);
-                    if (unlikely (rc < 0))
-                        return -1;
-                }
+//                //  Copy message to capture socket if any
+//                if (capture_) {
+//                    msg_t ctrl;
+//                    rc = ctrl.init ();
+//                    if (unlikely (rc < 0))
+//                        return -1;
+//                    rc = ctrl.copy (msg);
+//                    if (unlikely (rc < 0))
+//                        return -1;
+//                    rc = capture_->send (&ctrl, more? ZMQ_SNDMORE: 0);
+//                    if (unlikely (rc < 0))
+//                        return -1;
+//                }
+                // 将数据拷贝到backend中
                 rc = backend_->send (&msg, more? ZMQ_SNDMORE: 0);
                 if (unlikely (rc < 0))
                     return -1;

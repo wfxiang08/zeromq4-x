@@ -24,8 +24,7 @@
 #include "dbuffer.hpp"
 #include "ypipe_base.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     //  Adapter for dbuffer, to plug it in instead of a queue for the sake
     //  of implementing the conflate socket option, which, if set, makes
@@ -34,20 +33,18 @@ namespace zmq
     //  reader_awake flag is needed here to mimic ypipe delicate behaviour
     //  around the reader being asleep (see 'c' pointer being NULL in ypipe.hpp)
 
-    template <typename T, int N> class ypipe_conflate_t : public ypipe_base_t<T,N>
-    {
+    template<typename T, int N>
+    class ypipe_conflate_t : public ypipe_base_t<T, N> {
     public:
 
         //  Initialises the pipe.
-        inline ypipe_conflate_t ()
-            : reader_awake(false)
-        {
+        inline ypipe_conflate_t()
+                : reader_awake(false) {
         }
 
         //  The destructor doesn't have to be virtual. It is mad virtual
         //  just to keep ICC and code checking tools from complaining.
-        inline virtual ~ypipe_conflate_t ()
-        {
+        inline virtual ~ypipe_conflate_t() {
         }
 
         //  Following function (write) deliberately copies uninitialised data
@@ -58,11 +55,12 @@ namespace zmq
 #pragma message save
 #pragma message disable(UNINIT)
 #endif
-        inline void write (const T &value_, bool incomplete_)
-        {
-            (void)incomplete_;
 
-            dbuffer.write (value_);
+        // 将数据写入: dbbuffer中
+        inline void write(const T &value_, bool incomplete_) {
+            (void) incomplete_;
+
+            dbuffer.write(value_);
         }
 
 #ifdef ZMQ_HAVE_OPENVMS
@@ -70,8 +68,7 @@ namespace zmq
 #endif
 
         // There are no incomplete items for conflate ypipe
-        inline bool unwrite (T *value_)
-        {
+        inline bool unwrite(T *value_) {
             return false;
         }
 
@@ -79,15 +76,13 @@ namespace zmq
         //  is as of the usual ypipe.
         //  Returns false if the reader thread is sleeping. In that case,
         //  caller is obliged to wake the reader up before using the pipe again.
-        inline bool flush ()
-        {
+        inline bool flush() {
             return reader_awake;
         }
 
         //  Check whether item is available for reading.
-        inline bool check_read ()
-        {
-            bool res = dbuffer.check_read ();
+        inline bool check_read() {
+            bool res = dbuffer.check_read();
             if (!res)
                 reader_awake = false;
 
@@ -96,30 +91,29 @@ namespace zmq
 
         //  Reads an item from the pipe. Returns false if there is no value.
         //  available.
-        inline bool read (T *value_)
-        {
-            if (!check_read ())
+        inline bool read(T *value_) {
+            if (!check_read())
                 return false;
 
-            return dbuffer.read (value_);
+            return dbuffer.read(value_);
         }
 
         //  Applies the function fn to the first elemenent in the pipe
         //  and returns the value returned by the fn.
         //  The pipe mustn't be empty or the function crashes.
-        inline bool probe (bool (*fn)(T &))
-        {
-            return dbuffer.probe (fn);
+        inline bool probe(bool (*fn)(T &)) {
+            return dbuffer.probe(fn);
         }
 
     protected:
 
-        dbuffer_t <T> dbuffer;
+        dbuffer_t<T> dbuffer;
         bool reader_awake;
 
         //  Disable copying of ypipe object.
-        ypipe_conflate_t (const ypipe_conflate_t&);
-        const ypipe_conflate_t &operator = (const ypipe_conflate_t&);
+        ypipe_conflate_t(const ypipe_conflate_t &);
+
+        const ypipe_conflate_t &operator=(const ypipe_conflate_t &);
     };
 
 }

@@ -224,6 +224,7 @@ void *zmq_init (int io_threads_)
 {
     if (io_threads_ >= 0) {
         void *ctx = zmq_ctx_new ();
+        // 设置io_threads_
         zmq_ctx_set (ctx, ZMQ_IO_THREADS, io_threads_);
         return ctx;
     }

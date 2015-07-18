@@ -75,33 +75,27 @@ namespace zmq
 
 #include <pthread.h>
 
-namespace zmq
-{
+namespace zmq {
 
-    class mutex_t
-    {
+    class mutex_t {
     public:
-        inline mutex_t ()
-        {
-            int rc = pthread_mutex_init (&mutex, NULL);
+        inline mutex_t() {
+            int rc = pthread_mutex_init(&mutex, NULL);
             posix_assert (rc);
         }
 
-        inline ~mutex_t ()
-        {
-            int rc = pthread_mutex_destroy (&mutex);
+        inline ~mutex_t() {
+            int rc = pthread_mutex_destroy(&mutex);
             posix_assert (rc);
         }
 
-        inline void lock ()
-        {
-            int rc = pthread_mutex_lock (&mutex);
+        inline void lock() {
+            int rc = pthread_mutex_lock(&mutex);
             posix_assert (rc);
         }
 
-        inline bool try_lock ()
-        {
-            int rc = pthread_mutex_trylock (&mutex);
+        inline bool try_lock() {
+            int rc = pthread_mutex_trylock(&mutex);
             if (rc == EBUSY)
                 return false;
 
@@ -109,9 +103,8 @@ namespace zmq
             return true;
         }
 
-        inline void unlock ()
-        {
-            int rc = pthread_mutex_unlock (&mutex);
+        inline void unlock() {
+            int rc = pthread_mutex_unlock(&mutex);
             posix_assert (rc);
         }
 
@@ -120,8 +113,9 @@ namespace zmq
         pthread_mutex_t mutex;
 
         // Disable copy construction and assignment.
-        mutex_t (const mutex_t&);
-        const mutex_t &operator = (const mutex_t&);
+        mutex_t(const mutex_t &);
+
+        const mutex_t &operator=(const mutex_t &);
     };
 
 }
@@ -129,28 +123,25 @@ namespace zmq
 #endif
 
 
-namespace zmq
-{
-    struct scoped_lock_t
-    {
-        scoped_lock_t (mutex_t& mutex_)
-            : mutex (mutex_)
-        {
-            mutex.lock ();
+namespace zmq {
+    struct scoped_lock_t {
+        scoped_lock_t(mutex_t &mutex_)
+                : mutex(mutex_) {
+            mutex.lock();
         }
 
-        ~scoped_lock_t ()
-        {
-            mutex.unlock ();
+        ~scoped_lock_t() {
+            mutex.unlock();
         }
 
     private:
 
-        mutex_t& mutex;
+        mutex_t &mutex;
 
         // Disable copy construction and assignment.
-        scoped_lock_t (const scoped_lock_t&);
-        const scoped_lock_t &operator = (const scoped_lock_t&);
+        scoped_lock_t(const scoped_lock_t &);
+
+        const scoped_lock_t &operator=(const scoped_lock_t &);
     };
 }
 

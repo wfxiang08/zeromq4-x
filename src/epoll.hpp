@@ -22,6 +22,7 @@
 
 //  poller.hpp decides which polling mechanism to use.
 #include "poller.hpp"
+
 #if defined ZMQ_USE_EPOLL
 
 #include <vector>

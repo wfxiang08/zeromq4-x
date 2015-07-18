@@ -37,6 +37,7 @@ namespace zmq
     struct i_engine;
     struct address_t;
 
+    // session_base_t
     class session_base_t :
         public own_t,
         public io_object_t,
