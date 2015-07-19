@@ -42,7 +42,7 @@ int zmq::rep_t::xrecv(msg_t *msg_) {
     //  to the reply pipe.
     // 消息的格式
     // <path1, "", path2, "", data>
-    // 其中: path1, path2等信息为: traceback stack
+    // 1. 其中: path1, path2等信息为: traceback stack
     if (request_begins) {
         // REP如何处理信息呢?
         // 碰到消息之后，先读取 TraceBack, 然后直接写入pipes中, router_t:xsend(msg_)
@@ -51,10 +51,11 @@ int zmq::rep_t::xrecv(msg_t *msg_) {
             if (rc != 0)
                 return rc;
 
-            // 正常数据:
-            // 要么没有traceback
-            // 
-            // 要么有
+            // 2. 正常的数据:
+            // <path, "", msgs>
+            //  more, more "", ....
+            // msgs
+            // 这里的stackback就两个msg part, 其他的信息都一并传递给 rep, 然后最终再传递回来
             if ((msg_->flags() & msg_t::more)) {
                 //  Empty message part delimits the traceback stack.
                 bool bottom = (msg_->size() == 0);
@@ -75,7 +76,7 @@ int zmq::rep_t::xrecv(msg_t *msg_) {
         request_begins = false;
     }
 
-    //  Get next message part to return to the user.
+    //  3. Get next message part to return to the user.
     int rc = router_t::xrecv(msg_);
     if (rc != 0)
         return rc;

@@ -164,7 +164,7 @@ int zmq::req_t::xrecv(msg_t *msg_) {
         
         // 这个消息可能是 <identity_xxx, "", data>
         // 如果没有更多，或者msg非空，这是什么情况? 和预取不一样
-        // 
+        // 如何消息不合法，则直接跳过
         if (unlikely (!(msg_->flags() & msg_t::more) || msg_->size() != 0)) {
             // 如果还有没有读取的消息，继续读取，直到完毕
             //  Skip the remaining frames and try the next message
