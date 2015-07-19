@@ -1,50 +1,26 @@
-/*
-    Copyright (c) 2007-2013 Contributors as noted in the AUTHORS file
-
-    This file is part of 0MQ.
-
-    0MQ is free software; you can redistribute it and/or modify it under
-    the terms of the GNU Lesser General Public License as published by
-    the Free Software Foundation; either version 3 of the License, or
-    (at your option) any later version.
-
-    0MQ is distributed in the hope that it will be useful,
-    but WITHOUT ANY WARRANTY; without even the implied warranty of
-    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-    GNU Lesser General Public License for more details.
-
-    You should have received a copy of the GNU Lesser General Public License
-    along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
-
 #include "rep.hpp"
-#include "err.hpp"
-#include "msg.hpp"
 
-zmq::rep_t::rep_t (class ctx_t *parent_, uint32_t tid_, int sid_) :
-    router_t (parent_, tid_, sid_),
-    sending_reply (false),
-    request_begins (true)
-{
+zmq::rep_t::rep_t(class ctx_t *parent_, uint32_t tid_, int sid_) :
+        router_t(parent_, tid_, sid_),
+        sending_reply(false),
+        request_begins(true) {
     options.type = ZMQ_REP;
 }
 
-zmq::rep_t::~rep_t ()
-{
+zmq::rep_t::~rep_t() {
 }
 
-int zmq::rep_t::xsend (msg_t *msg_)
-{
+int zmq::rep_t::xsend(msg_t *msg_) {
     //  If we are in the middle of receiving a request, we cannot send reply.
     if (!sending_reply) {
         errno = EFSM;
         return -1;
     }
 
-    bool more = msg_->flags () & msg_t::more ? true : false;
+    bool more = msg_->flags() & msg_t::more ? true : false;
 
     //  Push message to the reply pipe.
-    int rc = router_t::xsend (msg_);
+    int rc = router_t::xsend(msg_);
     if (rc != 0)
         return rc;
 
@@ -55,8 +31,7 @@ int zmq::rep_t::xsend (msg_t *msg_)
     return 0;
 }
 
-int zmq::rep_t::xrecv (msg_t *msg_)
-{
+int zmq::rep_t::xrecv(msg_t *msg_) {
     //  If we are in middle of sending a reply, we cannot receive next request.
     if (sending_reply) {
         errno = EFSM;
@@ -65,27 +40,35 @@ int zmq::rep_t::xrecv (msg_t *msg_)
 
     //  First thing to do when receiving a request is to copy all the labels
     //  to the reply pipe.
+    // 消息的格式
+    // <path1, "", path2, "", data>
+    // 其中: path1, path2等信息为: traceback stack
     if (request_begins) {
+        // REP如何处理信息呢?
+        // 碰到消息之后，先读取 TraceBack, 然后直接写入pipes中, router_t:xsend(msg_)
         while (true) {
-            int rc = router_t::xrecv (msg_);
+            int rc = router_t::xrecv(msg_);
             if (rc != 0)
                 return rc;
 
-            if ((msg_->flags () & msg_t::more)) {
+            // 正常数据:
+            // 要么没有traceback
+            // 
+            // 要么有
+            if ((msg_->flags() & msg_t::more)) {
                 //  Empty message part delimits the traceback stack.
-                bool bottom = (msg_->size () == 0);
+                bool bottom = (msg_->size() == 0);
 
                 //  Push it to the reply pipe.
-                rc = router_t::xsend (msg_);
+                rc = router_t::xsend(msg_);
                 errno_assert (rc == 0);
 
                 if (bottom)
                     break;
-            }
-            else {
+            } else {
                 //  If the traceback stack is malformed, discard anything
                 //  already sent to pipe (we're at end of invalid message).
-                rc = router_t::rollback ();
+                rc = router_t::rollback();
                 errno_assert (rc == 0);
             }
         }
@@ -93,12 +76,12 @@ int zmq::rep_t::xrecv (msg_t *msg_)
     }
 
     //  Get next message part to return to the user.
-    int rc = router_t::xrecv (msg_);
+    int rc = router_t::xrecv(msg_);
     if (rc != 0)
-       return rc;
+        return rc;
 
     //  If whole request is read, flip the FSM to reply-sending state.
-    if (!(msg_->flags () & msg_t::more)) {
+    if (!(msg_->flags() & msg_t::more)) {
         sending_reply = true;
         request_begins = true;
     }
@@ -106,18 +89,16 @@ int zmq::rep_t::xrecv (msg_t *msg_)
     return 0;
 }
 
-bool zmq::rep_t::xhas_in ()
-{
+bool zmq::rep_t::xhas_in() {
     if (sending_reply)
         return false;
 
-    return router_t::xhas_in ();
+    return router_t::xhas_in();
 }
 
-bool zmq::rep_t::xhas_out ()
-{
+bool zmq::rep_t::xhas_out() {
     if (!sending_reply)
         return false;
 
-    return router_t::xhas_out ();
+    return router_t::xhas_out();
 }

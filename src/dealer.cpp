@@ -83,10 +83,12 @@ int zmq::dealer_t::xsetsockopt(int option_, const void *optval_,
     return -1;
 }
 
+// DEALER的发送很直接，没有多余的动作
 int zmq::dealer_t::xsend(msg_t *msg_) {
     return sendpipe(msg_, NULL);
 }
 
+// DEALER的接受很直接，没有多余的动作
 int zmq::dealer_t::xrecv(msg_t *msg_) {
     return recvpipe(msg_, NULL);
 }

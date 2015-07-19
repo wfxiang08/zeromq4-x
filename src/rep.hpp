@@ -22,26 +22,32 @@
 
 #include "router.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     class ctx_t;
+
     class msg_t;
+
     class io_thread_t;
+
     class socket_base_t;
 
-    class rep_t : public router_t
-    {
+    // rep_t 是从 router_t集成的
+    class rep_t : public router_t {
     public:
 
-        rep_t (zmq::ctx_t *parent_, uint32_t tid_, int sid);
-        ~rep_t ();
+        rep_t(zmq::ctx_t *parent_, uint32_t tid_, int sid);
+
+        ~rep_t();
 
         //  Overloads of functions from socket_base_t.
-        int xsend (zmq::msg_t *msg_);
-        int xrecv (zmq::msg_t *msg_);
-        bool xhas_in ();
-        bool xhas_out ();
+        int xsend(zmq::msg_t *msg_);
+
+        int xrecv(zmq::msg_t *msg_);
+
+        bool xhas_in();
+
+        bool xhas_out();
 
     private:
 
@@ -53,8 +59,9 @@ namespace zmq
         //  of the request is the backtrace stack.
         bool request_begins;
 
-        rep_t (const rep_t&);
-        const rep_t &operator = (const rep_t&);
+        rep_t(const rep_t &);
+
+        const rep_t &operator=(const rep_t &);
 
     };
 

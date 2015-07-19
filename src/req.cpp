@@ -38,9 +38,13 @@ zmq::req_t::req_t(class ctx_t *parent_, uint32_t tid_, int sid_) :
 zmq::req_t::~req_t() {
 }
 
+//
+// REQ如何发送数据呢?
+//
 int zmq::req_t::xsend(msg_t *msg_) {
     //  If we've sent a request and we still haven't got the reply,
     //  we can't send another request unless the strict option is disabled.
+    // 0. 状态机管理
     if (receiving_reply) {
         if (strict) {
             errno = EFSM;
@@ -55,22 +59,25 @@ int zmq::req_t::xsend(msg_t *msg_) {
     }
 
     //  First part of the request is the request identity.
+    // 1. 上一个消息结束后的状态:  receiving_reply = false, message_begins: true
     if (message_begins) {
         reply_pipe = NULL;
 
-        if (request_id_frames_enabled) {
-            request_id++;
-
-            msg_t id;
-            int rc = id.init_data(&request_id, sizeof(request_id), NULL, NULL);
-            errno_assert (rc == 0);
-            id.set_flags(msg_t::more);
-
-            rc = dealer_t::sendpipe(&id, &reply_pipe);
-            if (rc != 0)
-                return -1;
-        }
-
+//        if (request_id_frames_enabled) {
+//            request_id++;
+//
+//            msg_t id;
+//            int rc = id.init_data(&request_id, sizeof(request_id), NULL, NULL);
+//            errno_assert (rc == 0);
+//            id.set_flags(msg_t::more);
+//
+//            rc = dealer_t::sendpipe(&id, &reply_pipe);
+//            if (rc != 0)
+//                return -1;
+//        }
+        
+        // 似乎发送了一个空的消息
+        // <identity, "", data>
         msg_t bottom;
         int rc = bottom.init();
         errno_assert (rc == 0);
@@ -99,13 +106,17 @@ int zmq::req_t::xsend(msg_t *msg_) {
         }
     }
 
+    // 2. 获取msg的状态(并且发送消息)
     bool more = msg_->flags() & msg_t::more ? true : false;
 
+    // 3. 发送msg
     int rc = dealer_t::xsend(msg_);
     if (rc != 0)
         return rc;
 
     //  If the request was fully sent, flip the FSM into reply-receiving state.
+    // 4. 控制 receiving_reply, message_begins
+    // 消息发送完毕，状态机转移
     if (!more) {
         receiving_reply = true;
         message_begins = true;
@@ -116,7 +127,7 @@ int zmq::req_t::xsend(msg_t *msg_) {
 
 int zmq::req_t::xrecv(msg_t *msg_) {
     // 也就是xrecv, xsend的工作状态必须固定
-    // 如果不是准备接受阶段就不能接受数据
+    // 0. 状态机管理。如果不是准备接受阶段就不能接受数据
     //  If request wasn't send, we can't wait for reply.
     if (!receiving_reply) {
         errno = EFSM; // Error Finite State Machine
@@ -146,11 +157,14 @@ int zmq::req_t::xrecv(msg_t *msg_) {
 
         //  The next frame must be 0.
         // TODO: Failing this check should also close the connection with the peer!
+        // 1. 读取一个消息
         int rc = recv_reply_pipe(msg_);
         if (rc != 0)
             return rc;
-
-        // 如果没有更多，或者msg非空，这是什么情况?
+        
+        // 这个消息可能是 <identity_xxx, "", data>
+        // 如果没有更多，或者msg非空，这是什么情况? 和预取不一样
+        // 
         if (unlikely (!(msg_->flags() & msg_t::more) || msg_->size() != 0)) {
             // 如果还有没有读取的消息，继续读取，直到完毕
             //  Skip the remaining frames and try the next message
