@@ -33,6 +33,9 @@ bool zmq::msg_t::check() {
     return u.base.type >= type_min && u.base.type <= type_max;
 }
 
+//
+// 默认类型: vsm
+//
 int zmq::msg_t::init() {
     u.vsm.type = type_vsm;
     u.vsm.flags = 0;
