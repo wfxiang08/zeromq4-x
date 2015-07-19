@@ -20,56 +20,58 @@
 #include "mailbox.hpp"
 #include "err.hpp"
 
-zmq::mailbox_t::mailbox_t ()
-{
+zmq::mailbox_t::mailbox_t() {
     //  Get the pipe into passive state. That way, if the users starts by
     //  polling on the associated file descriptor it will get woken up when
     //  new command is posted.
-    bool ok = cpipe.read (NULL);
+    bool ok = cpipe.read(NULL);
     zmq_assert (!ok);
     active = false;
 }
 
-zmq::mailbox_t::~mailbox_t ()
-{
+zmq::mailbox_t::~mailbox_t() {
     //  TODO: Retrieve and deallocate commands inside the cpipe.
 
     // Work around problem that other threads might still be in our
     // send() method, by waiting on the mutex before disappearing.
-    sync.lock ();
-    sync.unlock ();
+    // 等待其他的线程处理完毕
+    sync.lock();
+    sync.unlock();
 }
 
-zmq::fd_t zmq::mailbox_t::get_fd ()
-{
-    return signaler.get_fd ();
+zmq::fd_t zmq::mailbox_t::get_fd() {
+    return signaler.get_fd();
 }
 
-void zmq::mailbox_t::send (const command_t &cmd_)
-{
-    sync.lock ();
-    cpipe.write (cmd_, false);
-    bool ok = cpipe.flush ();
-    sync.unlock ();
+void zmq::mailbox_t::send(const command_t &cmd_) {
+    sync.lock();
+    // 一个cmd对应一个消息，一次性处理完毕
+    cpipe.write(cmd_, false);
+    
+    // 在cpipe中标识数据写成功了, 以后的rollback不会把上面写入的数据吐出来
+    bool ok = cpipe.flush(); 
+    sync.unlock();
+    
+    // reader在sleep, 需要给它一个信号
     if (!ok)
-        signaler.send ();
+        signaler.send();
 }
 
-int zmq::mailbox_t::recv (command_t *cmd_, int timeout_)
-{
+int zmq::mailbox_t::recv(command_t *cmd_, int timeout_) {
     //  Try to get the command straight away.
     if (active) {
-        bool ok = cpipe.read (cmd_);
+        bool ok = cpipe.read(cmd_);
         if (ok)
             return 0;
 
+        // 如果没有数据，则通过signal.recv来等待
         //  If there are no more commands available, switch into passive state.
         active = false;
-        signaler.recv ();
+        signaler.recv(); // 这些阻塞会怎么样呢?
     }
 
     //  Wait for signal from the command sender.
-    int rc = signaler.wait (timeout_);
+    int rc = signaler.wait(timeout_);
     if (rc != 0 && (errno == EAGAIN || errno == EINTR))
         return -1;
 
@@ -78,7 +80,7 @@ int zmq::mailbox_t::recv (command_t *cmd_, int timeout_)
 
     //  Get a command.
     errno_assert (rc == 0);
-    bool ok = cpipe.read (cmd_);
+    bool ok = cpipe.read(cmd_);
     zmq_assert (ok);
     return 0;
 }

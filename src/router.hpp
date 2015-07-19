@@ -29,41 +29,49 @@
 #include "msg.hpp"
 #include "fq.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     class ctx_t;
+
     class pipe_t;
 
     //  TODO: This class uses O(n) scheduling. Rewrite it to use O(1) algorithm.
     class router_t :
-        public socket_base_t
-    {
+            public socket_base_t {
     public:
 
-        router_t (zmq::ctx_t *parent_, uint32_t tid_, int sid);
-        ~router_t ();
+        router_t(zmq::ctx_t *parent_, uint32_t tid_, int sid);
+
+        ~router_t();
 
         //  Overloads of functions from socket_base_t.
-        void xattach_pipe (zmq::pipe_t *pipe_, bool subscribe_to_all_);
-        int xsetsockopt (int option_, const void *optval_, size_t optvallen_);
-        int xsend (zmq::msg_t *msg_);
-        int xrecv (zmq::msg_t *msg_);
-        bool xhas_in ();
-        bool xhas_out ();
-        void xread_activated (zmq::pipe_t *pipe_);
-        void xwrite_activated (zmq::pipe_t *pipe_);
-        void xpipe_terminated (zmq::pipe_t *pipe_);
+        void xattach_pipe(zmq::pipe_t *pipe_, bool subscribe_to_all_);
+
+        int xsetsockopt(int option_, const void *optval_, size_t optvallen_);
+
+        int xsend(zmq::msg_t *msg_);
+
+        int xrecv(zmq::msg_t *msg_);
+
+        bool xhas_in();
+
+        bool xhas_out();
+
+        void xread_activated(zmq::pipe_t *pipe_);
+
+        void xwrite_activated(zmq::pipe_t *pipe_);
+
+        void xpipe_terminated(zmq::pipe_t *pipe_);
 
     protected:
 
         //  Rollback any message parts that were sent but not yet flushed.
-        int rollback ();
+        int rollback();
 
     private:
 
         //  Receive peer id and update lookup map
-        bool identify_peer (pipe_t *pipe_);
+        bool identify_peer(pipe_t *pipe_);
 
         //  Fair queueing object for inbound pipes.
         fq_t fq;
@@ -84,17 +92,16 @@ namespace zmq
         //  If true, more incoming message parts are expected.
         bool more_in;
 
-        struct outpipe_t
-        {
+        struct outpipe_t {
             zmq::pipe_t *pipe;
             bool active;
         };
 
         //  We keep a set of pipes that have not been identified yet.
-        std::set <pipe_t*> anonymous_pipes;
+        std::set<pipe_t *> anonymous_pipes;
 
         //  Outbound pipes indexed by the peer IDs.
-        typedef std::map <blob_t, outpipe_t> outpipes_t;
+        typedef std::map<blob_t, outpipe_t> outpipes_t;
         outpipes_t outpipes;
 
         //  The pipe we are currently writing to.
@@ -115,8 +122,9 @@ namespace zmq
         // if true, send an empty message to every connected router peer
         bool probe_router;
 
-        router_t (const router_t&);
-        const router_t &operator = (const router_t&);
+        router_t(const router_t &);
+
+        const router_t &operator=(const router_t &);
     };
 
 }

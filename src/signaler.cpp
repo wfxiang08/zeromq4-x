@@ -23,14 +23,14 @@
 #define ZMQ_SIGNALER_WAIT_BASED_ON_SELECT
 #elif defined ZMQ_FORCE_POLL
 #define ZMQ_SIGNALER_WAIT_BASED_ON_POLL
-#elif defined ZMQ_HAVE_LINUX || defined ZMQ_HAVE_FREEBSD ||\
-    defined ZMQ_HAVE_OPENBSD || defined ZMQ_HAVE_SOLARIS ||\
-    defined ZMQ_HAVE_OSX || defined ZMQ_HAVE_QNXNTO ||\
-    defined ZMQ_HAVE_HPUX || defined ZMQ_HAVE_AIX ||\
+#elif defined ZMQ_HAVE_LINUX || defined ZMQ_HAVE_FREEBSD || \
+    defined ZMQ_HAVE_OPENBSD || defined ZMQ_HAVE_SOLARIS || \
+    defined ZMQ_HAVE_OSX || defined ZMQ_HAVE_QNXNTO || \
+    defined ZMQ_HAVE_HPUX || defined ZMQ_HAVE_AIX || \
     defined ZMQ_HAVE_NETBSD
 #define ZMQ_SIGNALER_WAIT_BASED_ON_POLL
-#elif defined ZMQ_HAVE_WINDOWS || defined ZMQ_HAVE_OPENVMS ||\
-	defined ZMQ_HAVE_CYGWIN
+#elif defined ZMQ_HAVE_WINDOWS || defined ZMQ_HAVE_OPENVMS || \
+    defined ZMQ_HAVE_CYGWIN
 #define ZMQ_SIGNALER_WAIT_BASED_ON_SELECT
 #endif
 
@@ -70,18 +70,20 @@
 #if defined ZMQ_HAVE_WINDOWS
 #include "windows.hpp"
 #else
+
 #include <unistd.h>
 #include <netinet/tcp.h>
 #include <unistd.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+
 #endif
 
 #if !defined (ZMQ_HAVE_WINDOWS)
+
 // Helper to sleep for specific number of milliseconds (or until signal)
 //
-static int sleep_ms (unsigned int ms_)
-{
+static int sleep_ms(unsigned int ms_) {
     if (ms_ == 0)
         return 0;
 #if defined ZMQ_HAVE_WINDOWS
@@ -91,7 +93,7 @@ static int sleep_ms (unsigned int ms_)
     usleep (ms_ * 1000);
     return 0;
 #else
-    return usleep (ms_ * 1000);
+    return usleep(ms_ * 1000);
 #endif
 }
 
@@ -99,10 +101,9 @@ static int sleep_ms (unsigned int ms_)
 // If EAGAIN is received, will sleep briefly (1-100ms) then try again, until
 // the overall timeout is reached.
 //
-static int close_wait_ms (int fd_, unsigned int max_ms_ = 2000)
-{
+static int close_wait_ms(int fd_, unsigned int max_ms_ = 2000) {
     unsigned int ms_so_far = 0;
-    unsigned int step_ms   = max_ms_ / 10;
+    unsigned int step_ms = max_ms_ / 10;
     if (step_ms < 1)
         step_ms = 1;
 
@@ -111,35 +112,32 @@ static int close_wait_ms (int fd_, unsigned int max_ms_ = 2000)
 
     int rc = 0;       // do not sleep on first attempt
 
-    do
-    {
-        if (rc == -1 && errno == EAGAIN)
-        {
-            sleep_ms (step_ms);
+    do {
+        if (rc == -1 && errno == EAGAIN) {
+            sleep_ms(step_ms);
             ms_so_far += step_ms;
         }
 
-        rc = close (fd_);
+        rc = close(fd_);
     } while (ms_so_far < max_ms_ && rc == -1 && errno == EAGAIN);
 
     return rc;
 }
+
 #endif
 
-zmq::signaler_t::signaler_t ()
-{
+zmq::signaler_t::signaler_t() {
     //  Create the socketpair for signaling.
-    if (make_fdpair (&r, &w) == 0) {
-        unblock_socket (w);
-        unblock_socket (r);
+    if (make_fdpair(&r, &w) == 0) {
+        unblock_socket(w);
+        unblock_socket(r);
     }
 #ifdef HAVE_FORK
     pid = getpid();
 #endif
 }
 
-zmq::signaler_t::~signaler_t ()
-{
+zmq::signaler_t::~signaler_t() {
 #if defined ZMQ_HAVE_EVENTFD
     int rc = close_wait_ms (r);
     errno_assert (rc == 0);
@@ -156,56 +154,29 @@ zmq::signaler_t::~signaler_t ()
         wsa_assert (rc != SOCKET_ERROR);
     }
 #else
-    int rc = close_wait_ms (w);
+    int rc = close_wait_ms(w);
     errno_assert (rc == 0);
-    rc = close_wait_ms (r);
+    rc = close_wait_ms(r);
     errno_assert (rc == 0);
 #endif
 }
 
-zmq::fd_t zmq::signaler_t::get_fd ()
-{
+zmq::fd_t zmq::signaler_t::get_fd() {
     return r;
 }
 
-void zmq::signaler_t::send ()
-{
-#if HAVE_FORK
-    if (unlikely(pid != getpid())) {
-        //printf("Child process %d signaler_t::send returning without sending #1\n", getpid());
-        return; // do not send anything in forked child context
-    }
-#endif
-#if defined ZMQ_HAVE_EVENTFD
-    const uint64_t inc = 1;
-    ssize_t sz = write (w, &inc, sizeof (inc));
-    errno_assert (sz == sizeof (inc));
-#elif defined ZMQ_HAVE_WINDOWS
-    unsigned char dummy = 0;
-    int nbytes = ::send (w, (char*) &dummy, sizeof (dummy), 0);
-    wsa_assert (nbytes != SOCKET_ERROR);
-    zmq_assert (nbytes == sizeof (dummy));
-#else
+void zmq::signaler_t::send() {
+
     unsigned char dummy = 0;
     while (true) {
-        ssize_t nbytes = ::send (w, &dummy, sizeof (dummy), 0);
+        ssize_t nbytes = ::send(w, &dummy, sizeof(dummy), 0);
         if (unlikely (nbytes == -1 && errno == EINTR))
-            continue;
-#if HAVE_FORK
-        if (unlikely(pid != getpid())) {
-            //printf("Child process %d signaler_t::send returning without sending #2\n", getpid());
-            errno = EINTR;
-            break;
-        }
-#endif
-        zmq_assert (nbytes == sizeof (dummy));
+            zmq_assert (nbytes == sizeof(dummy));
         break;
     }
-#endif
 }
 
-int zmq::signaler_t::wait (int timeout_)
-{
+int zmq::signaler_t::wait(int timeout_) {
 #ifdef HAVE_FORK
     if (unlikely(pid != getpid()))
     {
@@ -279,8 +250,7 @@ int zmq::signaler_t::wait (int timeout_)
 #endif
 }
 
-void zmq::signaler_t::recv ()
-{
+void zmq::signaler_t::recv() {
     //  Attempt to read a signal.
 #if defined ZMQ_HAVE_EVENTFD
     uint64_t dummy;
@@ -303,10 +273,10 @@ void zmq::signaler_t::recv ()
     int nbytes = ::recv (r, (char*) &dummy, sizeof (dummy), 0);
     wsa_assert (nbytes != SOCKET_ERROR);
 #else
-    ssize_t nbytes = ::recv (r, &dummy, sizeof (dummy), 0);
+    ssize_t nbytes = ::recv(r, &dummy, sizeof(dummy), 0);
     errno_assert (nbytes >= 0);
 #endif
-    zmq_assert (nbytes == sizeof (dummy));
+    zmq_assert (nbytes == sizeof(dummy));
     zmq_assert (dummy == 0);
 #endif
 }
@@ -322,8 +292,7 @@ void zmq::signaler_t::forked()
 #endif
 
 //  Returns -1 if we could not make the socket pair successfully
-int zmq::signaler_t::make_fdpair (fd_t *r_, fd_t *w_)
-{
+int zmq::signaler_t::make_fdpair(fd_t *r_, fd_t *w_) {
 #if defined ZMQ_HAVE_EVENTFD
     fd_t fd = eventfd (0, 0);
     if (fd == -1) {
@@ -516,16 +485,16 @@ int zmq::signaler_t::make_fdpair (fd_t *r_, fd_t *w_)
 
 #else
     // All other implementations support socketpair()
-    int sv [2];
-    int rc = socketpair (AF_UNIX, SOCK_STREAM, 0, sv);
+    int sv[2];
+    int rc = socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
     if (rc == -1) {
         errno_assert (errno == ENFILE || errno == EMFILE);
         *w_ = *r_ = -1;
         return -1;
     }
     else {
-        *w_ = sv [0];
-        *r_ = sv [1];
+        *w_ = sv[0];
+        *r_ = sv[1];
         return 0;
     }
 #endif

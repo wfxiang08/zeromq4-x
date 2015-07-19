@@ -31,86 +31,97 @@
 #include "socket_base.hpp"
 #include "../include/zmq.h"
 
-namespace zmq
-{
+namespace zmq {
     //  Protocol revisions
-    enum
-    {
+    enum {
         ZMTP_1_0 = 0,
         ZMTP_2_0 = 1
     };
 
     class io_thread_t;
+
     class msg_t;
+
     class session_base_t;
+
     class mechanism_t;
 
     //  This engine handles any socket with SOCK_STREAM semantics,
     //  e.g. TCP socket or an UNIX domain socket.
 
-    class stream_engine_t : public io_object_t, public i_engine
-    {
+    class stream_engine_t : public io_object_t, public i_engine {
     public:
 
-        stream_engine_t (fd_t fd_, const options_t &options_, 
-                         const std::string &endpoint);
-        ~stream_engine_t ();
+        stream_engine_t(fd_t fd_, const options_t &options_,
+                        const std::string &endpoint);
+
+        ~stream_engine_t();
 
         //  i_engine interface implementation.
-        void plug (zmq::io_thread_t *io_thread_,
-           zmq::session_base_t *session_);
-        void terminate ();
-        void restart_input ();
-        void restart_output ();
-        void zap_msg_available ();
+        void plug(zmq::io_thread_t *io_thread_,
+                  zmq::session_base_t *session_);
+
+        void terminate();
+
+        void restart_input();
+
+        void restart_output();
+
+        void zap_msg_available();
 
         //  i_poll_events interface implementation.
-        void in_event ();
-        void out_event ();
+        void in_event();
+
+        void out_event();
 
     private:
 
         //  Unplug the engine from the session.
-        void unplug ();
+        void unplug();
 
         //  Function to handle network disconnections.
-        void error ();
+        void error();
 
         //  Receives the greeting message from the peer.
-        int receive_greeting ();
+        int receive_greeting();
 
         //  Detects the protocol used by the peer.
-        bool handshake ();
+        bool handshake();
 
         //  Writes data to the socket. Returns the number of bytes actually
         //  written (even zero is to be considered to be a success). In case
         //  of error or orderly shutdown by the other peer -1 is returned.
-        int write (const void *data_, size_t size_);
+        int write(const void *data_, size_t size_);
 
         //  Reads data from the socket (up to 'size' bytes).
         //  Returns the number of bytes actually read or -1 on error.
         //  Zero indicates the peer has closed the connection.
-        int read (void *data_, size_t size_);
+        int read(void *data_, size_t size_);
 
-        int read_identity (msg_t *msg_);
-        int write_identity (msg_t *msg_);
+        int read_identity(msg_t *msg_);
 
-        int next_handshake_command (msg_t *msg);
-        int process_handshake_command (msg_t *msg);
+        int write_identity(msg_t *msg_);
 
-        int pull_msg_from_session (msg_t *msg_);
-        int push_msg_to_session (msg_t *msg);
+        int next_handshake_command(msg_t *msg);
 
-        int pull_and_encode (msg_t *msg_);
-        int decode_and_push (msg_t *msg_);
-        int push_one_then_decode_and_push (msg_t *msg_);
+        int process_handshake_command(msg_t *msg);
 
-        void mechanism_ready ();
+        int pull_msg_from_session(msg_t *msg_);
 
-        int write_subscription_msg (msg_t *msg_);
+        int push_msg_to_session(msg_t *msg);
 
-        size_t add_property (unsigned char *ptr,
-            const char *name, const void *value, size_t value_len);
+        int pull_and_encode(msg_t *msg_);
+
+        int decode_and_push(msg_t *msg_);
+
+        int push_one_then_decode_and_push(msg_t *msg_);
+
+        void mechanism_ready();
+
+        int write_subscription_msg(msg_t *msg_);
+
+        size_t add_property(unsigned char *ptr,
+                            const char *name, const void *value, size_t value_len);
 
         //  Underlying socket.
         fd_t s;
@@ -147,8 +158,8 @@ namespace zmq
         size_t greeting_size;
 
         //  Greeting received from, and sent to peer
-        unsigned char greeting_recv [v3_greeting_size];
-        unsigned char greeting_send [v3_greeting_size];
+        unsigned char greeting_recv[v3_greeting_size];
+        unsigned char greeting_send[v3_greeting_size];
 
         //  Size of greeting received so far
         unsigned int greeting_bytes_read;
@@ -163,9 +174,9 @@ namespace zmq
 
         bool plugged;
 
-        int (stream_engine_t::*read_msg) (msg_t *msg_);
+        int (stream_engine_t::*read_msg)(msg_t *msg_);
 
-        int (stream_engine_t::*write_msg) (msg_t *msg_);
+        int (stream_engine_t::*write_msg)(msg_t *msg_);
 
         bool io_error;
 
@@ -187,8 +198,9 @@ namespace zmq
 
         std::string peer_address;
 
-        stream_engine_t (const stream_engine_t&);
-        const stream_engine_t &operator = (const stream_engine_t&);
+        stream_engine_t(const stream_engine_t &);
+
+        const stream_engine_t &operator=(const stream_engine_t &);
     };
 
 }

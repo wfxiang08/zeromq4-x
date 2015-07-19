@@ -42,6 +42,7 @@ zmq::session_base_t *zmq::session_base_t::create(class io_thread_t *io_thread_,
     session_base_t *s = NULL;
     switch (options_.type) {
         case ZMQ_REQ:
+            // 除了REQ之外，其他的Session都基本相同
             s = new(std::nothrow) req_session_t(io_thread_, connect_,
                                                 socket_, options_, addr_);
             break;
@@ -118,12 +119,15 @@ int zmq::session_base_t::pull_msg(msg_t *msg_) {
         errno = EAGAIN;
         return -1;
     }
+    
+    // 消息是否完整读取
     incomplete_in = msg_->flags() & msg_t::more ? true : false;
 
     return 0;
 }
 
 int zmq::session_base_t::push_msg(msg_t *msg_) {
+    // 往pipe中写入数据，如果成功了，则reset msg
     if (pipe && pipe->write(msg_)) {
         int rc = msg_->init();
         errno_assert (rc == 0);
@@ -473,6 +477,7 @@ void zmq::session_base_t::start_connecting(bool wait_) {
     //  Create the connecter object.
 
     if (addr->protocol == "tcp") {
+        // 如果 是 tcp, 则调用 connecter 来建立连接
         tcp_connecter_t *connecter = new(std::nothrow) tcp_connecter_t(
                 io_thread, this, options, addr, wait_);
         alloc_assert (connecter);

@@ -31,7 +31,7 @@ namespace zmq {
     //  array_item_t template for all relevant IDs.
 
     //
-    // 定义array_item_t
+    // 定义array_item_t, 数组中的每个元素会自己记录自己的index
     //
     template<int ID = 0>
     class array_item_t {
@@ -117,6 +117,7 @@ namespace zmq {
             items.pop_back();
         }
 
+        // 如何交换两个元素的位置: 首先交换index, 然后交换数据
         inline void swap(size_type index1_, size_type index2_) {
             //
             // 分别调整: items[index1_] items[index2_]中的 array index
@@ -137,7 +138,7 @@ namespace zmq {
         }
 
     private:
-
+        // 为了保证效率，元素都以指针的形式保存
         typedef std::vector<T *> items_t;
         // 定义数据的items
         items_t items;

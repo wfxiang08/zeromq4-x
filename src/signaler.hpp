@@ -26,25 +26,28 @@
 
 #include "fd.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     //  This is a cross-platform equivalent to signal_fd. However, as opposed
     //  to signal_fd there can be at most one signal in the signaler at any
     //  given moment. Attempt to send a signal before receiving the previous
     //  one will result in undefined behaviour.
 
-    class signaler_t
-    {
+    // 最多只能有一个信号
+    class signaler_t {
     public:
 
-        signaler_t ();
-        ~signaler_t ();
+        signaler_t();
 
-        fd_t get_fd ();
-        void send ();
-        int wait (int timeout_);
-        void recv ();
+        ~signaler_t();
+
+        fd_t get_fd();
+
+        void send();
+
+        int wait(int timeout_);
+
+        void recv();
 
 #ifdef HAVE_FORK
         // close the file descriptors in a forked child process so that they
@@ -56,7 +59,7 @@ namespace zmq
 
         //  Creates a pair of filedescriptors that will be used
         //  to pass the signals.
-        static int make_fdpair (fd_t *r_, fd_t *w_);
+        static int make_fdpair(fd_t *r_, fd_t *w_);
 
         //  Underlying write & read file descriptor
         //  Will be -1 if we exceeded number of available handles
@@ -64,8 +67,9 @@ namespace zmq
         fd_t r;
 
         //  Disable copying of signaler_t object.
-        signaler_t (const signaler_t&);
-        const signaler_t &operator = (const signaler_t&);
+        signaler_t(const signaler_t &);
+
+        const signaler_t &operator=(const signaler_t &);
 
 #ifdef HAVE_FORK
         // the process that created this context. Used to detect forking.

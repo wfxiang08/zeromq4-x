@@ -30,20 +30,25 @@
 #include "ypipe.hpp"
 #include "mutex.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
-    class mailbox_t
-    {
+    //
+    // mailbox_t是一个多(线程)写单(线程)读的命令执行队列
+    // 就像邮箱一样: 多个人投递，一个人取
+    //
+    class mailbox_t {
     public:
 
-        mailbox_t ();
-        ~mailbox_t ();
+        mailbox_t();
 
-        fd_t get_fd ();
-        void send (const command_t &cmd_);
-        int recv (command_t *cmd_, int timeout_);
-        
+        ~mailbox_t();
+
+        fd_t get_fd();
+
+        void send(const command_t &cmd_);
+
+        int recv(command_t *cmd_, int timeout_);
+
 #ifdef HAVE_FORK
         // close the file descriptors in the signaller. This is used in a forked
         // child process to close the file descriptors so that they do not interfere
@@ -54,7 +59,9 @@ namespace zmq
     private:
 
         //  The pipe to store actual commands.
-        typedef ypipe_t <command_t, command_pipe_granularity> cpipe_t;
+        typedef ypipe_t<command_t, command_pipe_granularity> cpipe_t;
+        
+        // 命令pipe, 为一个命令的queue
         cpipe_t cpipe;
 
         //  Signaler to pass signals from writer thread to reader thread.
@@ -64,6 +71,7 @@ namespace zmq
         //  is arbitrary number of threads sending. Given that ypipe requires
         //  synchronised access on both of its endpoints, we have to synchronise
         //  the sending side.
+        // C++版的封装
         mutex_t sync;
 
         //  True if the underlying pipe is active, ie. when we are allowed to
@@ -71,8 +79,9 @@ namespace zmq
         bool active;
 
         //  Disable copying of mailbox_t object.
-        mailbox_t (const mailbox_t&);
-        const mailbox_t &operator = (const mailbox_t&);
+        mailbox_t(const mailbox_t &);
+
+        const mailbox_t &operator=(const mailbox_t &);
     };
 
 }

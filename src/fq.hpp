@@ -26,7 +26,7 @@
 
 namespace zmq {
 
-    //  Class manages a set of inbound pipes. On receive it performs fair
+    //  Class manages a set of inbound pipes(只处理输入的情况). On receive it performs fair
     //  queueing so that senders gone berserk won't cause denial of
     //  service for decent senders.
 

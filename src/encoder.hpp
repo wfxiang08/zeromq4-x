@@ -35,40 +35,37 @@
 #include "msg.hpp"
 #include "i_encoder.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     //  Helper base class for encoders. It implements the state machine that
     //  fills the outgoing buffer. Derived classes should implement individual
     //  state machine actions.
 
-    template <typename T> class encoder_base_t : public i_encoder
-    {
+    template<typename T>
+    class encoder_base_t : public i_encoder {
     public:
 
-        inline encoder_base_t (size_t bufsize_) :
-            bufsize (bufsize_),
-            in_progress (NULL)
-        {
-            buf = (unsigned char*) malloc (bufsize_);
+        inline encoder_base_t(size_t bufsize_) :
+                bufsize(bufsize_),
+                in_progress(NULL) {
+            buf = (unsigned char *) malloc(bufsize_);
             alloc_assert (buf);
         }
 
         //  The destructor doesn't have to be virtual. It is made virtual
         //  just to keep ICC and code checking tools from complaining.
-        inline virtual ~encoder_base_t ()
-        {
-            free (buf);
+        inline virtual ~encoder_base_t() {
+            free(buf);
         }
 
         //  The function returns a batch of binary data. The data
         //  are filled to a supplied buffer. If no buffer is supplied (data_
         //  points to NULL) decoder object will provide buffer of its own.
-        inline size_t encode (unsigned char **data_, size_t size_)
-        {
+        inline size_t encode(unsigned char **data_, size_t size_) {
             unsigned char *buffer = !*data_ ? buf : *data_;
             size_t buffersize = !*data_ ? bufsize : size_;
 
+            // 如果没有数据，则data为空
             if (in_progress == NULL)
                 return 0;
 
@@ -80,14 +77,14 @@ namespace zmq
                 //  in the buffer.
                 if (!to_write) {
                     if (new_msg_flag) {
-                        int rc = in_progress->close ();
+                        int rc = in_progress->close();
                         errno_assert (rc == 0);
-                        rc = in_progress->init ();
+                        rc = in_progress->init();
                         errno_assert (rc == 0);
                         in_progress = NULL;
                         break;
                     }
-                    (static_cast <T*> (this)->*next) ();
+                    (static_cast <T *> (this)->*next)();
                 }
 
                 //  If there are no data in the buffer yet and we are able to
@@ -109,8 +106,8 @@ namespace zmq
                 }
 
                 //  Copy data to the buffer. If the buffer is full, return.
-                size_t to_copy = std::min (to_write, buffersize - pos);
-                memcpy (buffer + pos, write_pos, to_copy);
+                size_t to_copy = std::min(to_write, buffersize - pos);
+                memcpy(buffer + pos, write_pos, to_copy);
                 pos += to_copy;
                 write_pos += to_copy;
                 to_write -= to_copy;
@@ -120,24 +117,22 @@ namespace zmq
             return pos;
         }
 
-        void load_msg (msg_t *msg_)
-        {
+        void load_msg(msg_t *msg_) {
             zmq_assert (in_progress == NULL);
             in_progress = msg_;
-            (static_cast <T*> (this)->*next) ();
+            (static_cast <T *> (this)->*next)();
         }
 
     protected:
 
         //  Prototype of state machine action.
-        typedef void (T::*step_t) ();
+        typedef void (T::*step_t)();
 
         //  This function should be called from derived class to write the data
         //  to the buffer and schedule next state machine action.
-        inline void next_step (void *write_pos_, size_t to_write_,
-            step_t next_, bool new_msg_flag_)
-        {
-            write_pos = (unsigned char*) write_pos_;
+        inline void next_step(void *write_pos_, size_t to_write_,
+                              step_t next_, bool new_msg_flag_) {
+            write_pos = (unsigned char *) write_pos_;
             to_write = to_write_;
             next = next_;
             new_msg_flag = new_msg_flag_;
@@ -161,8 +156,9 @@ namespace zmq
         size_t bufsize;
         unsigned char *buf;
 
-        encoder_base_t (const encoder_base_t&);
-        void operator = (const encoder_base_t&);
+        encoder_base_t(const encoder_base_t &);
+
+        void operator=(const encoder_base_t &);
 
     protected:
 

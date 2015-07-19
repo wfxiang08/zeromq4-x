@@ -28,93 +28,100 @@
 #include "pipe.hpp"
 #include "socket_base.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     class pipe_t;
+
     class io_thread_t;
+
     class socket_base_t;
+
     struct i_engine;
     struct address_t;
 
     // session_base_t
-    class session_base_t :
-        public own_t,
-        public io_object_t,
-        public i_pipe_events
-    {
+    class session_base_t :  public own_t,  public io_object_t, public i_pipe_events {
     public:
 
         //  Create a session of the particular type.
-        static session_base_t *create (zmq::io_thread_t *io_thread_,
-            bool connect_, zmq::socket_base_t *socket_,
-            const options_t &options_, const address_t *addr_);
+        static session_base_t *create(zmq::io_thread_t *io_thread_,
+                                      bool connect_, zmq::socket_base_t *socket_,
+                                      const options_t &options_, const address_t *addr_);
 
         //  To be used once only, when creating the session.
-        void attach_pipe (zmq::pipe_t *pipe_);
+        void attach_pipe(zmq::pipe_t *pipe_);
 
         //  Following functions are the interface exposed towards the engine.
-        virtual void reset ();
-        void flush ();
-        void detach ();
+        virtual void reset();
+
+        void flush();
+
+        void detach();
 
         //  i_pipe_events interface implementation.
-        void read_activated (zmq::pipe_t *pipe_);
-        void write_activated (zmq::pipe_t *pipe_);
-        void hiccuped (zmq::pipe_t *pipe_);
-        void pipe_terminated (zmq::pipe_t *pipe_);
+        void read_activated(zmq::pipe_t *pipe_);
+
+        void write_activated(zmq::pipe_t *pipe_);
+
+        void hiccuped(zmq::pipe_t *pipe_);
+
+        void pipe_terminated(zmq::pipe_t *pipe_);
 
         //  Delivers a message. Returns 0 if successful; -1 otherwise.
         //  The function takes ownership of the message.
-        int push_msg (msg_t *msg_);
+        int push_msg(msg_t *msg_);
 
-        int zap_connect ();
-        bool zap_enabled ();
-        
+        int zap_connect();
+
+        bool zap_enabled();
+
         //  Fetches a message. Returns 0 if successful; -1 otherwise.
         //  The caller is responsible for freeing the message when no
         //  longer used.
-        int pull_msg (msg_t *msg_);
+        int pull_msg(msg_t *msg_);
 
         //  Receives message from ZAP socket.
         //  Returns 0 on success; -1 otherwise.
         //  The caller is responsible for freeing the message.
-        int read_zap_msg (msg_t *msg_);
+        int read_zap_msg(msg_t *msg_);
 
         //  Sends message to ZAP socket.
         //  Returns 0 on success; -1 otherwise.
         //  The function takes ownership of the message.
-        int write_zap_msg (msg_t *msg_);
+        int write_zap_msg(msg_t *msg_);
 
-        socket_base_t *get_socket ();
+        socket_base_t *get_socket();
 
     protected:
 
-        session_base_t (zmq::io_thread_t *io_thread_, bool connect_,
-            zmq::socket_base_t *socket_, const options_t &options_,
-            const address_t *addr_);
-        virtual ~session_base_t ();
+        session_base_t(zmq::io_thread_t *io_thread_, bool connect_,
+                       zmq::socket_base_t *socket_, const options_t &options_,
+                       const address_t *addr_);
+
+        virtual ~session_base_t();
 
     private:
 
-        void start_connecting (bool wait_);
+        void start_connecting(bool wait_);
 
-        void detached ();
+        void detached();
 
         //  Handlers for incoming commands.
-        void process_plug ();
-        void process_attach (zmq::i_engine *engine_);
-        void process_term (int linger_);
+        void process_plug();
+
+        void process_attach(zmq::i_engine *engine_);
+
+        void process_term(int linger_);
 
         //  i_poll_events handlers.
-        void timer_event (int id_);
+        void timer_event(int id_);
 
         //  Remove any half processed messages. Flush unflushed messages.
         //  Call this function when engine disconnect to get rid of leftovers.
-        void clean_pipes ();
+        void clean_pipes();
 
         //  Call this function to move on with the delayed process_term.
-        void proceed_with_term ();
+        void proceed_with_term();
 
         //  If true, this session (re)connects to the peer. Otherwise, it's
         //  a transient session created by the listener.
@@ -127,7 +134,7 @@ namespace zmq
         zmq::pipe_t *zap_pipe;
 
         //  This set is added to with pipes we are disconnecting, but haven't yet completed
-        std::set <pipe_t *> terminating_pipes;
+        std::set<pipe_t *> terminating_pipes;
 
         //  This flag is true if the remainder of the message being processed
         //  is still in the in pipe.
@@ -148,7 +155,9 @@ namespace zmq
         zmq::io_thread_t *io_thread;
 
         //  ID of the linger timer
-        enum {linger_timer_id = 0x20};
+        enum {
+            linger_timer_id = 0x20
+        };
 
         //  True is linger timer is running.
         bool has_linger_timer;
@@ -156,8 +165,9 @@ namespace zmq
         //  Protocol and address to use when connecting.
         const address_t *addr;
 
-        session_base_t (const session_base_t&);
-        const session_base_t &operator = (const session_base_t&);
+        session_base_t(const session_base_t &);
+
+        const session_base_t &operator=(const session_base_t &);
     };
 
 }

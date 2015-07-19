@@ -48,38 +48,33 @@
 #include <arch/atomic.h>
 #endif
 
-namespace zmq
-{
+namespace zmq {
 
     //  This class encapsulates several atomic operations on pointers.
-
-    template <typename T> class atomic_ptr_t
-    {
+    // 保证一定的原子操作
+    template<typename T>
+    class atomic_ptr_t {
     public:
 
         //  Initialise atomic pointer
-        inline atomic_ptr_t ()
-        {
+        inline atomic_ptr_t() {
             ptr = NULL;
         }
 
         //  Destroy atomic pointer
-        inline ~atomic_ptr_t ()
-        {
+        inline ~atomic_ptr_t() {
         }
 
         //  Set value of atomic pointer in a non-threadsafe way
         //  Use this function only when you are sure that at most one
         //  thread is accessing the pointer at the moment.
-        inline void set (T *ptr_)
-        {
+        inline void set(T *ptr_) {
             this->ptr = ptr_;
         }
 
         //  Perform atomic 'exchange pointers' operation. Pointer is set
         //  to the 'val' value. Old value is returned.
-        inline T *xchg (T *val_)
-        {
+        inline T *xchg(T *val_) {
 #if defined ZMQ_ATOMIC_PTR_WINDOWS
             return (T*) InterlockedExchangePointer ((PVOID*) &ptr, val_);
 #elif defined ZMQ_ATOMIC_PTR_ATOMIC_H
@@ -89,9 +84,9 @@ namespace zmq
 #elif defined ZMQ_ATOMIC_PTR_X86
             T *old;
             __asm__ volatile (
-                "lock; xchg %0, %2"
-                : "=r" (old), "=m" (ptr)
-                : "m" (ptr), "0" (val_));
+            "lock; xchg %0, %2"
+            : "=r" (old), "=m" (ptr)
+            : "m" (ptr), "0" (val_));
             return old;
 #elif defined ZMQ_ATOMIC_PTR_ARM
             T* old;
@@ -122,8 +117,7 @@ namespace zmq
         //  The pointer is compared to 'cmp' argument and if they are
         //  equal, its value is set to 'val'. Old value of the pointer
         //  is returned.
-        inline T *cas (T *cmp_, T *val_)
-        {
+        inline T *cas(T *cmp_, T *val_) {
 #if defined ZMQ_ATOMIC_PTR_WINDOWS
             return (T*) InterlockedCompareExchangePointer (
                 (volatile PVOID*) &ptr, val_, cmp_);
@@ -134,10 +128,10 @@ namespace zmq
 #elif defined ZMQ_ATOMIC_PTR_X86
             T *old;
             __asm__ volatile (
-                "lock; cmpxchg %2, %3"
-                : "=a" (old), "=m" (ptr)
-                : "r" (val_), "m" (ptr), "0" (cmp_)
-                : "cc");
+            "lock; cmpxchg %2, %3"
+            : "=a" (old), "=m" (ptr)
+            : "r" (val_), "m" (ptr), "0" (cmp_)
+            : "cc");
             return old;
 #elif defined ZMQ_ATOMIC_PTR_ARM
             T *old;
@@ -175,8 +169,9 @@ namespace zmq
         mutex_t sync;
 #endif
 
-        atomic_ptr_t (const atomic_ptr_t&);
-        const atomic_ptr_t &operator = (const atomic_ptr_t&);
+        atomic_ptr_t(const atomic_ptr_t &);
+
+        const atomic_ptr_t &operator=(const atomic_ptr_t &);
     };
 
 }

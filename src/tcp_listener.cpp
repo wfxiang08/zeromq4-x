@@ -138,17 +138,18 @@ int zmq::tcp_listener_t::set_address(const char *addr_) {
         return -1;
 
     //  Create a listening socket.
+    // 1. 创建一个socket
     s = open_socket(address.family(), SOCK_STREAM, IPPROTO_TCP);
 
-    //  IPv6 address family not supported, try automatic downgrade to IPv4.
-    if (address.family() == AF_INET6
-        && errno == EAFNOSUPPORT
-        && options.ipv6) {
-        rc = address.resolve(addr_, true, true);
-        if (rc != 0)
-            return rc;
-        s = ::socket(address.family(), SOCK_STREAM, IPPROTO_TCP);
-    }
+//    //  IPv6 address family not supported, try automatic downgrade to IPv4.
+//    if (address.family() == AF_INET6
+//        && errno == EAFNOSUPPORT
+//        && options.ipv6) {
+//        rc = address.resolve(addr_, true, true);
+//        if (rc != 0)
+//            return rc;
+//        s = ::socket(address.family(), SOCK_STREAM, IPPROTO_TCP);
+//    }
 
     if (s == -1)
         return -1;
@@ -171,6 +172,9 @@ int zmq::tcp_listener_t::set_address(const char *addr_) {
         (const char*) &flag, sizeof (int));
     wsa_assert (rc != SOCKET_ERROR);
 #else
+    // 重用地址
+    // http://www.cnblogs.com/mydomain/archive/2011/08/23/2150567.html 
+    // 运行多次绑定同一个地址
     rc = setsockopt(s, SOL_SOCKET, SO_REUSEADDR, &flag, sizeof(int));
     errno_assert (rc == 0);
 #endif

@@ -25,13 +25,14 @@
 #ifdef ZMQ_HAVE_WINDOWS
 #include "windows.hpp"
 #else
+
 #include <pthread.h>
+
 #endif
 
-namespace zmq
-{
+namespace zmq {
 
-    typedef void (thread_fn) (void*);
+    typedef void (thread_fn)(void *);
 
     //  Class encapsulating OS thread. Thread initiation/termination is done
     //  using special functions rather than in constructor/destructor so that
@@ -40,26 +41,24 @@ namespace zmq
     //  to the destruction process: Thread should be terminated before object
     //  destruction begins, otherwise it can access half-destructed object.
 
-    class thread_t
-    {
+    class thread_t {
     public:
 
-        inline thread_t ()
-        {
+        inline thread_t() {
         }
 
         //  Creates OS thread. 'tfn' is main thread function. It'll be passed
         //  'arg' as an argument.
-        void start (thread_fn *tfn_, void *arg_);
+        void start(thread_fn *tfn_, void *arg_);
 
         //  Waits for thread termination.
-        void stop ();
+        void stop();
 
         //  These are internal members. They should be private, however then
         //  they would not be accessible from the main C routine of the thread.
         thread_fn *tfn;
         void *arg;
-        
+
     private:
 
 #ifdef ZMQ_HAVE_WINDOWS
@@ -68,8 +67,9 @@ namespace zmq
         pthread_t descriptor;
 #endif
 
-        thread_t (const thread_t&);
-        const thread_t &operator = (const thread_t&);
+        thread_t(const thread_t &);
+
+        const thread_t &operator=(const thread_t &);
     };
 
 }

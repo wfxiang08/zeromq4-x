@@ -36,6 +36,9 @@
 #include <ioctl.h>
 #endif
 
+//
+// 设置socket的选项
+//
 void zmq::tune_tcp_socket (fd_t s_)
 {
     //  Disable Nagle's algorithm. We are doing data batching on 0MQ level,

@@ -22,24 +22,25 @@
 
 #include "stdint.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     class object_t;
+
     class own_t;
+
     struct i_engine;
+
     class pipe_t;
+
     class socket_base_t;
 
     //  This structure defines the commands that can be sent between threads.
 
-    struct command_t
-    {
+    struct command_t {
         //  Object to process the command.
         zmq::object_t *destination;
 
-        enum type_t
-        {
+        enum type_t {
             stop,
             plug,
             own,
@@ -148,6 +149,6 @@ namespace zmq
         } args;
     };
 
-}    
+}
 
 #endif

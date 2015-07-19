@@ -32,6 +32,8 @@ namespace zmq {
     // 1. load balance
     // 2. pipes
     //    如何通过pipe可靠地传输消息
+    
+    // 负责数据的输出, outbound pipes
     class lb_t {
     public:
 

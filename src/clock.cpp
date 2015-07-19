@@ -35,7 +35,9 @@
 #endif
 
 #if !defined ZMQ_HAVE_WINDOWS
+
 #include <sys/time.h>
+
 #endif
 
 #if defined HAVE_CLOCK_GETTIME || defined HAVE_GETHRTIME
@@ -78,22 +80,20 @@ f_compatible_get_tick_count64 init_compatible_get_tick_count64()
 static f_compatible_get_tick_count64 my_get_tick_count64 = init_compatible_get_tick_count64();
 #endif
 
-zmq::clock_t::clock_t () :
-    last_tsc (rdtsc ()),
+zmq::clock_t::clock_t() :
+        last_tsc(rdtsc()),
 #ifdef ZMQ_HAVE_WINDOWS
     last_time (static_cast<uint64_t>((*my_get_tick_count64)()))
 #else
-    last_time (now_us () / 1000)
+        last_time(now_us() / 1000)
 #endif
 {
 }
 
-zmq::clock_t::~clock_t ()
-{
+zmq::clock_t::~clock_t() {
 }
 
-uint64_t zmq::clock_t::now_us ()
-{
+uint64_t zmq::clock_t::now_us() {
 #if defined ZMQ_HAVE_WINDOWS
 
     //  Get the high resolution counter's accuracy.
@@ -134,20 +134,18 @@ uint64_t zmq::clock_t::now_us ()
 
     //  Use POSIX gettimeofday function to get precise time.
     struct timeval tv;
-    int rc = gettimeofday (&tv, NULL);
+    int rc = gettimeofday(&tv, NULL);
     errno_assert (rc == 0);
     return (tv.tv_sec * (uint64_t) 1000000 + tv.tv_usec);
 
 #endif
 }
 
-uint64_t zmq::clock_t::now_ms ()
-{
-    uint64_t tsc = rdtsc ();
+uint64_t zmq::clock_t::now_ms() {
+    uint64_t tsc = rdtsc();
 
     //  If TSC is not supported, get precise time and chop off the microseconds.
-    if (!tsc)
-    {
+    if (!tsc) {
 #ifdef ZMQ_HAVE_WINDOWS
         // Under Windows, now_us is not so reliable since QueryPerformanceCounter
         // does not guarantee that it will use a hardware that offers a monotonic timer.
@@ -155,7 +153,7 @@ uint64_t zmq::clock_t::now_ms ()
         // to its 32 bit limitation.
         return static_cast<uint64_t>((*my_get_tick_count64)());
 #else
-        return now_us () / 1000;
+        return now_us() / 1000;
 #endif
     }
 
@@ -169,13 +167,12 @@ uint64_t zmq::clock_t::now_ms ()
 #ifdef ZMQ_HAVE_WINDOWS
     last_time = static_cast<uint64_t>((*my_get_tick_count64)());
 #else
-    last_time = now_us () / 1000;
+    last_time = now_us() / 1000;
 #endif
     return last_time;
 }
 
-uint64_t zmq::clock_t::rdtsc ()
-{
+uint64_t zmq::clock_t::rdtsc() {
 #if (defined _MSC_VER && (defined _M_IX86 || defined _M_X64))
     return __rdtsc ();
 #elif (defined __GNUC__ && (defined __i386__ || defined __x86_64__))

@@ -27,43 +27,43 @@
 #include "tcp_address.hpp"
 #include "../include/zmq.h"
 
-namespace zmq
-{
+namespace zmq {
 
     class io_thread_t;
+
     class socket_base_t;
 
-    class tcp_listener_t : public own_t, public io_object_t
-    {
+    class tcp_listener_t : public own_t, public io_object_t {
     public:
 
-        tcp_listener_t (zmq::io_thread_t *io_thread_,
-            zmq::socket_base_t *socket_, const options_t &options_);
-        ~tcp_listener_t ();
+        tcp_listener_t(zmq::io_thread_t *io_thread_, zmq::socket_base_t *socket_, const options_t &options_);
+
+        ~tcp_listener_t();
 
         //  Set address to listen on.
-        int set_address (const char *addr_);
+        int set_address(const char *addr_);
 
         // Get the bound address for use with wildcard
-        int get_address (std::string &addr_);
+        int get_address(std::string &addr_);
 
     private:
 
         //  Handlers for incoming commands.
-        void process_plug ();
-        void process_term (int linger_);
+        void process_plug();
+
+        void process_term(int linger_);
 
         //  Handlers for I/O events.
-        void in_event ();
+        void in_event();
 
         //  Close the listening socket.
-        void close ();
+        void close();
 
         //  Accept the new connection. Returns the file descriptor of the
         //  newly created connection. The function may return retired_fd
         //  if the connection was dropped while waiting in the listen backlog
         //  or was denied because of accept filters.
-        fd_t accept ();
+        fd_t accept();
 
         //  Address to listen on.
         tcp_address_t address;
@@ -77,11 +77,12 @@ namespace zmq
         //  Socket the listerner belongs to.
         zmq::socket_base_t *socket;
 
-       // String representation of endpoint to bind to
+        // String representation of endpoint to bind to
         std::string endpoint;
 
-        tcp_listener_t (const tcp_listener_t&);
-        const tcp_listener_t &operator = (const tcp_listener_t&);
+        tcp_listener_t(const tcp_listener_t &);
+
+        const tcp_listener_t &operator=(const tcp_listener_t &);
     };
 
 }

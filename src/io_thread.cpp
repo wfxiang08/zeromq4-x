@@ -24,11 +24,18 @@
 #include "err.hpp"
 #include "ctx.hpp"
 
+//
+// 什么是 io_thread呢? 
+// 1. 自己带有一个poller, 可以监控: fd的变化
+// 
+//
 zmq::io_thread_t::io_thread_t(ctx_t *ctx_, uint32_t tid_) :
         object_t(ctx_, tid_) {
     poller = new(std::nothrow) poller_t;
     alloc_assert (poller);
 
+    // 如果mailbox有数据写入，则通知当前的io_thread
+    // io_thread不会自动处理，那么会在什么地方被驱动呢?
     mailbox_handle = poller->add_fd(mailbox.get_fd(), this);
     poller->set_pollin(mailbox_handle);
 }
@@ -43,6 +50,7 @@ void zmq::io_thread_t::start() {
 }
 
 void zmq::io_thread_t::stop() {
+    // 不直接关闭，而是通过command间接控制
     send_stop();
 }
 
@@ -62,6 +70,8 @@ void zmq::io_thread_t::in_event() {
     int rc = mailbox.recv(&cmd, 0);
 
     while (rc == 0 || errno == EINTR) {
+        // do while
+        // 处理当前的command, 然后再准备接受下一个command
         if (rc == 0)
             cmd.destination->process_command(cmd);
         rc = mailbox.recv(&cmd, 0);

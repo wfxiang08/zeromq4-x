@@ -76,8 +76,13 @@ bool zmq::socket_base_t::check_tag() {
     return tag == 0xbaddecaf;
 }
 
+//
+// 如何创建socket?
+//
 zmq::socket_base_t *zmq::socket_base_t::create(int type_, class ctx_t *parent_,
                                                uint32_t tid_, int sid_) {
+    // tid_, 对应slot_id, 或者thread_id
+    // sid: session id
     socket_base_t *s = NULL;
     switch (type_) {
         case ZMQ_PAIR:
@@ -120,6 +125,7 @@ zmq::socket_base_t *zmq::socket_base_t::create(int type_, class ctx_t *parent_,
             errno = EINVAL;
             return NULL;
     }
+    // s的mailbox在什么地方设置呢?
     if (s->mailbox.get_fd() == retired_fd)
         return NULL;
 
@@ -185,24 +191,7 @@ int zmq::socket_base_t::check_protocol(const std::string &protocol_) {
         errno = EPROTONOSUPPORT;
         return -1;
     }
-
-    //  If 0MQ is not compiled with OpenPGM, pgm and epgm transports
-    //  are not avaialble.
-#if !defined ZMQ_HAVE_OPENPGM
-    if (protocol_ == "pgm" || protocol_ == "epgm") {
-        errno = EPROTONOSUPPORT;
-        return -1;
-    }
-#endif
-
-    //  IPC transport is not available on Windows and OpenVMS.
-#if defined ZMQ_HAVE_WINDOWS || defined ZMQ_HAVE_OPENVMS
-    if (protocol_ == "ipc") {
-        //  Unknown protocol.
-        errno = EPROTONOSUPPORT;
-        return -1;
-    }
-#endif
+    
 
     //  Check whether socket type and transport protocol match.
     //  Specifically, multicast protocols can't be combined with
@@ -657,6 +646,7 @@ int zmq::socket_base_t::recv(msg_t *msg_, int flags_) {
         ticks = 0;
     }
 
+    // XXX: 正常情况下读取  message
     //  Get the message.
     int rc = xrecv(msg_);
     if (unlikely (rc != 0 && errno != EAGAIN))
