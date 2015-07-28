@@ -24,33 +24,39 @@
 
 #include "router.hpp"
 
-namespace zmq
-{
+namespace zmq {
 
     class ctx_t;
+
     class pipe_t;
 
-    class stream_t :
-        public socket_base_t
-    {
+    class stream_t : public socket_base_t {
     public:
 
-        stream_t (zmq::ctx_t *parent_, uint32_t tid_, int sid);
-        ~stream_t ();
+        stream_t(zmq::ctx_t *parent_, uint32_t tid_, int sid);
+
+        ~stream_t();
 
         //  Overloads of functions from socket_base_t.
-        void xattach_pipe (zmq::pipe_t *pipe_, bool subscribe_to_all_);
-        int xsend (zmq::msg_t *msg_);
-        int xrecv (zmq::msg_t *msg_);
-        bool xhas_in ();
-        bool xhas_out ();
-        void xread_activated (zmq::pipe_t *pipe_);
-        void xwrite_activated (zmq::pipe_t *pipe_);
-        void xpipe_terminated (zmq::pipe_t *pipe_);
+        void xattach_pipe(zmq::pipe_t *pipe_, bool subscribe_to_all_);
+
+        int xsend(zmq::msg_t *msg_);
+
+        int xrecv(zmq::msg_t *msg_);
+
+        bool xhas_in();
+
+        bool xhas_out();
+
+        void xread_activated(zmq::pipe_t *pipe_);
+
+        void xwrite_activated(zmq::pipe_t *pipe_);
+
+        void xpipe_terminated(zmq::pipe_t *pipe_);
 
     private:
         //  Generate peer's id and update lookup map
-        void identify_peer (pipe_t *pipe_);
+        void identify_peer(pipe_t *pipe_);
 
         //  Fair queueing object for inbound pipes.
         fq_t fq;
@@ -68,14 +74,13 @@ namespace zmq
         //  Holds the prefetched message.
         msg_t prefetched_msg;
 
-        struct outpipe_t
-        {
+        struct outpipe_t {
             zmq::pipe_t *pipe;
             bool active;
         };
 
         //  Outbound pipes indexed by the peer IDs.
-        typedef std::map <blob_t, outpipe_t> outpipes_t;
+        typedef std::map<blob_t, outpipe_t> outpipes_t;
         outpipes_t outpipes;
 
         //  The pipe we are currently writing to.
@@ -88,8 +93,9 @@ namespace zmq
         //  algorithm. This value is the next ID to use (if not used already).
         uint32_t next_peer_id;
 
-        stream_t (const stream_t&);
-        const stream_t &operator = (const stream_t&);
+        stream_t(const stream_t &);
+
+        const stream_t &operator=(const stream_t &);
     };
 
 }

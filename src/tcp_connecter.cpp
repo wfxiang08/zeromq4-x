@@ -119,9 +119,9 @@ void zmq::tcp_connecter_t::out_event() {
     alloc_assert (engine);
 
     //  Attach the engine to the corresponding session object.
-    send_attach(session, engine); // 将session和engine关联起来，然后自己的使命就结束了?
+    send_attach(session, engine); // 将session和engine关联起来，然后自己的使命
 
-    //  Shut the connecter down. 为什么要关闭自己呢?
+    //  Shut the connecter down. 为什么要关闭自己呢? tcp_connector完成自己的任务之后就退出了(它只负责connecting)
     terminate();
 
     socket->event_connected(endpoint, fd);
@@ -133,14 +133,20 @@ void zmq::tcp_connecter_t::timer_event(int id_) {
     start_connecting();
 }
 
+//
+// 如何启动一个connection
+//
 void zmq::tcp_connecter_t::start_connecting() {
-    //  Open the connecting socket.
+    //  1. Open the connecting socket.
     int rc = open();
 
     //  Connect may succeed in synchronous manner.
     if (rc == 0) {
+        // 2. 添加handler
         handle = add_fd(s);
         handle_valid = true;
+        
+        // 3. 输出数据
         out_event();
     }
 

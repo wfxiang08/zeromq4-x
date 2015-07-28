@@ -72,6 +72,9 @@
 #include "xsub.hpp"
 #include "stream.hpp"
 
+//
+// tag: 在socket开启状态时为 0xbaddecaf, stop之后设置为其他状态
+//
 bool zmq::socket_base_t::check_tag() {
     return tag == 0xbaddecaf;
 }
@@ -468,6 +471,11 @@ int zmq::socket_base_t::connect(const char *addr_) {
         rc = pipepair(parents, new_pipes, hwms, conflates);
         errno_assert (rc == 0);
 
+        // 有两个概念:
+        //    socket, session
+        //            session是和endpoint关联的
+        //    socket负责: new_pipes[0], 而session负责: new_pipes[1]
+        //    
         // 2. 将pipe和session关联
         //  Attach local end of the pipe to the socket object.
         attach_pipe(new_pipes[0], subscribe_to_all);
@@ -487,6 +495,9 @@ int zmq::socket_base_t::connect(const char *addr_) {
 void zmq::socket_base_t::add_endpoint(const char *addr_, own_t *endpoint_, pipe_t *pipe) {
     //  Activate the session. Make it a child of this socket.
     launch_child(endpoint_);
+    
+    // 添加endpoints
+    // addr ---> (session, newpipe)
     endpoints.insert(endpoints_t::value_type(std::string(addr_), endpoint_pipe_t(endpoint_, pipe)));
 }
 

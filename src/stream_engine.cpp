@@ -121,28 +121,29 @@ void zmq::stream_engine_t::plug(io_thread_t *io_thread_,
     socket = session->get_socket();
 
     //  Connect to I/O threads poller object.
+    // 获取io_thread的poller
     io_object_t::plug(io_thread_);
     
     // 和当前socket对应的handle，直接处理网络数据
     handle = add_fd(s);
     io_error = false;
 
-    // 新特性(暂时不考虑)
-    if (options.raw_sock) {
-        // no handshaking for raw sock, instantiate raw encoder and decoders
-        encoder = new(std::nothrow) raw_encoder_t(out_batch_size);
-        alloc_assert (encoder);
-
-        decoder = new(std::nothrow) raw_decoder_t(in_batch_size);
-        alloc_assert (decoder);
-
-        // disable handshaking for raw socket
-        handshaking = false;
-
-        read_msg = &stream_engine_t::pull_msg_from_session;
-        write_msg = &stream_engine_t::push_msg_to_session;
-    }
-    else {
+//    // 新特性(暂时不考虑)
+//    if (options.raw_sock) {
+//        // no handshaking for raw sock, instantiate raw encoder and decoders
+//        encoder = new(std::nothrow) raw_encoder_t(out_batch_size);
+//        alloc_assert (encoder);
+//
+//        decoder = new(std::nothrow) raw_decoder_t(in_batch_size);
+//        alloc_assert (decoder);
+//
+//        // disable handshaking for raw socket
+//        handshaking = false;
+//
+//        read_msg = &stream_engine_t::pull_msg_from_session;
+//        write_msg = &stream_engine_t::push_msg_to_session;
+//    }
+//    else {
         //  Send the 'length' and 'flags' fields of the identity message.
         //  The 'length' field is encoded in the long format.
         outpos = greeting_send;
@@ -150,7 +151,7 @@ void zmq::stream_engine_t::plug(io_thread_t *io_thread_,
         put_uint64(&outpos[outsize], options.identity_size + 1);
         outsize += 8;
         outpos[outsize++] = 0x7f;
-    }
+//    }
 
     // 将handler分别注册到 read, write fd中
     set_pollin(handle);
@@ -179,10 +180,14 @@ void zmq::stream_engine_t::terminate() {
     delete this;
 }
 
+//
+// 将session中的数据读取出来，然后写出去
+//
 void zmq::stream_engine_t::in_event() {
     assert (!io_error);
 
     //  If still handshaking, receive and process the greeting message.
+    // 1. 首先handshake, 确定通信协议
     if (unlikely (handshaking)) if (!handshake())
         return;
 
@@ -388,6 +393,10 @@ void zmq::stream_engine_t::restart_input() {
 bool zmq::stream_engine_t::handshake() {
     zmq_assert (handshaking);
     zmq_assert (greeting_bytes_read < greeting_size);
+    
+    // stream_engine_t出现的两个场合
+    // listener, acceptor(connector)都是被动接受的
+    // 读取对方的 greeting msg
     //  Receive the greeting.
     while (greeting_bytes_read < greeting_size) {
         const int n = read(greeting_recv + greeting_bytes_read,
@@ -407,7 +416,7 @@ bool zmq::stream_engine_t::handshake() {
         //  We have received at least one byte from the peer.
         //  If the first byte is not 0xff, we know that the
         //  peer is using unversioned protocol.
-        if (greeting_recv[0] != 0xff)
+        if (greeting_recv[0] != 0xff) // 忽略: 假定一切OK
             break;
 
         if (greeting_bytes_read < signature_size)
@@ -460,6 +469,7 @@ bool zmq::stream_engine_t::handshake() {
         }
     }
 
+    // 获取client的信息，服务器就主动是适配；没有必要相互沟通(旧版本的沟通了也没有什么作用)
     //  Position of the revision field in the greeting.
     const size_t revision_pos = 10;
 
@@ -530,19 +540,19 @@ bool zmq::stream_engine_t::handshake() {
             error();
             return false;
         }
+        
+        // 采用: ZMTP_2_0的传输协议
         encoder = new(std::nothrow) v2_encoder_t(out_batch_size);
         alloc_assert (encoder);
 
-        decoder = new(std::nothrow) v2_decoder_t(
-                in_batch_size, options.maxmsgsize);
+        decoder = new(std::nothrow) v2_decoder_t(in_batch_size, options.maxmsgsize);
         alloc_assert (decoder);
     }
     else {
         encoder = new(std::nothrow) v2_encoder_t(out_batch_size);
         alloc_assert (encoder);
 
-        decoder = new(std::nothrow) v2_decoder_t(
-                in_batch_size, options.maxmsgsize);
+        decoder = new(std::nothrow) v2_decoder_t(in_batch_size, options.maxmsgsize);
         alloc_assert (decoder);
 
         if (options.mechanism == ZMQ_NULL

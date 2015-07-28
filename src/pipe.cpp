@@ -62,6 +62,9 @@ int zmq::pipepair(class object_t *parents_[2], class pipe_t *pipes_[2],
                                          hwms_[0], hwms_[1], conflate_[1]);
     alloc_assert (pipes_[1]);
 
+    // upipe1, upipe2是两个双线管道
+    // pipes_分别位于这两个管道的两边
+    // 这两边分别对应着谁?
     // 然后相互设置peer
     pipes_[0]->set_peer(pipes_[1]);
     pipes_[1]->set_peer(pipes_[0]);
@@ -111,6 +114,8 @@ zmq::blob_t zmq::pipe_t::get_identity() {
     return identity;
 }
 
+// pipe在 state 为 active  或 waiting_for_delimiter 时数据可读
+//
 bool zmq::pipe_t::check_read() {
     if (unlikely (!in_active))
         return false;
@@ -125,6 +130,9 @@ bool zmq::pipe_t::check_read() {
 
     //  If the next item in the pipe is message delimiter,
     //  initiate termination process.
+    // waiting_for_delimiter 是否终结? 终结了pipe的使命完成
+    // 判断输入pipe中的第一个消息是否为: delimiter
+    //
     if (inpipe->probe(is_delimiter)) {
         msg_t msg;
         bool ok = inpipe->read(&msg);
@@ -170,6 +178,7 @@ bool zmq::pipe_t::read(msg_t *msg_) {
 // 如何检查是否可写数据呢?
 //
 bool zmq::pipe_t::check_write() {
+    // 只有处于active状态下才可以写数据
     if (unlikely (!out_active || state != active))
         return false;
 
@@ -278,6 +287,7 @@ void zmq::pipe_t::process_pipe_term() {
     //  Otherwise we'll hang up in waiting_for_delimiter state till all
     //  pending messages are read.
     if (state == active) {
+        // 如果没有delay, 则直接进行状态切换: active --> term_ack_sent (drop pending message)
         if (!delay) {
             state = term_ack_sent;
             outpipe = NULL;
@@ -401,6 +411,7 @@ void zmq::pipe_t::terminate(bool delay_) {
     //  Stop outbound flow of messages.
     out_active = false;
 
+    // 收到请求之后，立即发送: delimiter信号
     if (outpipe) {
 
         // Drop any unfinished outbound messages.
@@ -448,14 +459,18 @@ int zmq::pipe_t::compute_lwm(int hwm_) {
     return result;
 }
 
+//
+// 接受到"定界符", 解析来就是状态切换
+//
 void zmq::pipe_t::process_delimiter() {
-    zmq_assert (state == active
-                || state == waiting_for_delimiter);
+    zmq_assert (state == active || state == waiting_for_delimiter);
 
     if (state == active)
         state = delimiter_received;
     else {
+        // 不再输出数据
         outpipe = NULL;
+        // 告诉对方，我们可以结束了
         send_pipe_term_ack(peer);
         state = term_ack_sent;
     }

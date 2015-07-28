@@ -40,6 +40,8 @@ void zmq::dealer_t::xattach_pipe(pipe_t *pipe_, bool subscribe_to_all_) {
 
     zmq_assert (pipe_);
 
+    // 空消息的作用?
+    // router如何使用? 如何跳过？
     if (probe_router) {
         // 发送一个空消息到 peering router
         msg_t probe_msg_;

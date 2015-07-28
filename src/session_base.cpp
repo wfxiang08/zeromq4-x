@@ -328,6 +328,7 @@ void zmq::session_base_t::process_attach(i_engine *engine_) {
     zmq_assert (engine_ != NULL);
 
     //  Create the pipe if it does not exist yet.
+    // 这个和socket中的代码重复, 阅读上暂时跳过
     if (!pipe && !is_terminating()) {
         object_t *parents[2] = {this, socket};
         pipe_t *pipes[2] = {NULL, NULL};
@@ -357,6 +358,7 @@ void zmq::session_base_t::process_attach(i_engine *engine_) {
     }
 
     //  Plug in the engine.
+    //
     zmq_assert (!engine);
     engine = engine_;
     engine->plug(io_thread, this);

@@ -66,6 +66,7 @@ struct iovec {
 #include <string.h>
 #include <stdlib.h>
 #include <new>
+#include <sys/poll.h>
 
 #include "proxy.hpp"
 #include "socket_base.hpp"
@@ -275,10 +276,14 @@ int zmq_sendmsg(void *s_, zmq_msg_t *msg_, int flags_) {
 }
 
 int zmq_send(void *s_, const void *buf_, size_t len_, int flags_) {
+    // Sock存在问题(这个应该也不是主要问题)
     if (!s_ || !((zmq::socket_base_t *) s_)->check_tag()) {
         errno = ENOTSOCK;
         return -1;
     }
+    
+    
+    // 正常发送Msg
     zmq_msg_t msg;
     int rc = zmq_msg_init_size(&msg, len_);
     if (rc != 0)
@@ -561,25 +566,19 @@ int zmq_msg_set(zmq_msg_t *, int, int) {
 }
 
 // Polling.
-
+// 关于Timeout的作用?
 int zmq_poll(zmq_pollitem_t *items_, int nitems_, long timeout_) {
-#if defined ZMQ_POLL_BASED_ON_POLL
     if (unlikely (nitems_ < 0)) {
         errno = EINVAL;
         return -1;
     }
+    
+    // 如果 ntimes == 0, 则至少sleep指定的时间(单位为 ms)
     if (unlikely (nitems_ == 0)) {
         if (timeout_ == 0)
             return 0;
-#if defined ZMQ_HAVE_WINDOWS
-        Sleep (timeout_ > 0 ? timeout_ : INFINITE);
-        return 0;
-#elif defined ZMQ_HAVE_ANDROID
-        usleep (timeout_ * 1000);
-        return 0;
-#else
+        // 有可能是极大的时间浪费
         return usleep (timeout_ * 1000);
-#endif
     }
 
     if (!items_) {
@@ -590,9 +589,10 @@ int zmq_poll(zmq_pollitem_t *items_, int nitems_, long timeout_) {
     zmq::clock_t clock;
     uint64_t now = 0;
     uint64_t end = 0;
+    
+    // 准备空间
     pollfd spollfds[ZMQ_POLLITEMS_DFLT];
     pollfd *pollfds = spollfds;
-
     if (nitems_ > ZMQ_POLLITEMS_DFLT) {
         pollfds = (pollfd*) malloc (nitems_ * sizeof (pollfd));
         alloc_assert (pollfds);
@@ -724,193 +724,7 @@ int zmq_poll(zmq_pollitem_t *items_, int nitems_, long timeout_) {
     if (pollfds != spollfds)
         free (pollfds);
     return nevents;
-
-#elif defined ZMQ_POLL_BASED_ON_SELECT
-
-    if (unlikely (nitems_ < 0)) {
-        errno = EINVAL;
-        return -1;
-    }
-    if (unlikely (nitems_ == 0)) {
-        if (timeout_ == 0)
-            return 0;
-#if defined ZMQ_HAVE_WINDOWS
-        Sleep (timeout_ > 0 ? timeout_ : INFINITE);
-        return 0;
-#else
-        return usleep (timeout_ * 1000);
-#endif
-    }
-    zmq::clock_t clock;
-    uint64_t now = 0;
-    uint64_t end = 0;
-
-    //  Ensure we do not attempt to select () on more than FD_SETSIZE
-    //  file descriptors.
-    zmq_assert (nitems_ <= FD_SETSIZE);
-
-    fd_set pollset_in;
-    FD_ZERO (&pollset_in);
-    fd_set pollset_out;
-    FD_ZERO (&pollset_out);
-    fd_set pollset_err;
-    FD_ZERO (&pollset_err);
-
-    zmq::fd_t maxfd = 0;
-
-    //  Build the fd_sets for passing to select ().
-    for (int i = 0; i != nitems_; i++) {
-
-        //  If the poll item is a 0MQ socket we are interested in input on the
-        //  notification file descriptor retrieved by the ZMQ_FD socket option.
-        if (items_ [i].socket) {
-            size_t zmq_fd_size = sizeof (zmq::fd_t);
-            zmq::fd_t notify_fd;
-            if (zmq_getsockopt (items_ [i].socket, ZMQ_FD, &notify_fd,
-                &zmq_fd_size) == -1)
-                return -1;
-            if (items_ [i].events) {
-                FD_SET (notify_fd, &pollset_in);
-                if (maxfd < notify_fd)
-                    maxfd = notify_fd;
-            }
-        }
-        //  Else, the poll item is a raw file descriptor. Convert the poll item
-        //  events to the appropriate fd_sets.
-        else {
-            if (items_ [i].events & ZMQ_POLLIN)
-                FD_SET (items_ [i].fd, &pollset_in);
-            if (items_ [i].events & ZMQ_POLLOUT)
-                FD_SET (items_ [i].fd, &pollset_out);
-            if (items_ [i].events & ZMQ_POLLERR)
-                FD_SET (items_ [i].fd, &pollset_err);
-            if (maxfd < items_ [i].fd)
-                maxfd = items_ [i].fd;
-        }
-    }
-
-    bool first_pass = true;
-    int nevents = 0;
-    fd_set inset, outset, errset;
-
-    while (true) {
-
-        //  Compute the timeout for the subsequent poll.
-        timeval timeout;
-        timeval *ptimeout;
-        if (first_pass) {
-            timeout.tv_sec = 0;
-            timeout.tv_usec = 0;
-            ptimeout = &timeout;
-        }
-        else
-        if (timeout_ < 0)
-            ptimeout = NULL;
-        else {
-            timeout.tv_sec = (long) ((end - now) / 1000);
-            timeout.tv_usec = (long) ((end - now) % 1000 * 1000);
-            ptimeout = &timeout;
-        }
-
-        //  Wait for events. Ignore interrupts if there's infinite timeout.
-        while (true) {
-            memcpy (&inset, &pollset_in, sizeof (fd_set));
-            memcpy (&outset, &pollset_out, sizeof (fd_set));
-            memcpy (&errset, &pollset_err, sizeof (fd_set));
-#if defined ZMQ_HAVE_WINDOWS
-            int rc = select (0, &inset, &outset, &errset, ptimeout);
-            if (unlikely (rc == SOCKET_ERROR)) {
-                errno = zmq::wsa_error_to_errno (WSAGetLastError ());
-                wsa_assert (errno == ENOTSOCK);
-                return -1;
-            }
-#else
-            int rc = select (maxfd + 1, &inset, &outset, &errset, ptimeout);
-            if (unlikely (rc == -1)) {
-                errno_assert (errno == EINTR || errno == EBADF);
-                return -1;
-            }
-#endif
-            break;
-        }
-
-        //  Check for the events.
-        for (int i = 0; i != nitems_; i++) {
-
-            items_ [i].revents = 0;
-
-            //  The poll item is a 0MQ socket. Retrieve pending events
-            //  using the ZMQ_EVENTS socket option.
-            if (items_ [i].socket) {
-                size_t zmq_events_size = sizeof (uint32_t);
-                uint32_t zmq_events;
-                if (zmq_getsockopt (items_ [i].socket, ZMQ_EVENTS, &zmq_events,
-                      &zmq_events_size) == -1)
-                    return -1;
-                if ((items_ [i].events & ZMQ_POLLOUT) &&
-                      (zmq_events & ZMQ_POLLOUT))
-                    items_ [i].revents |= ZMQ_POLLOUT;
-                if ((items_ [i].events & ZMQ_POLLIN) &&
-                      (zmq_events & ZMQ_POLLIN))
-                    items_ [i].revents |= ZMQ_POLLIN;
-            }
-            //  Else, the poll item is a raw file descriptor, simply convert
-            //  the events to zmq_pollitem_t-style format.
-            else {
-                if (FD_ISSET (items_ [i].fd, &inset))
-                    items_ [i].revents |= ZMQ_POLLIN;
-                if (FD_ISSET (items_ [i].fd, &outset))
-                    items_ [i].revents |= ZMQ_POLLOUT;
-                if (FD_ISSET (items_ [i].fd, &errset))
-                    items_ [i].revents |= ZMQ_POLLERR;
-            }
-
-            if (items_ [i].revents)
-                nevents++;
-        }
-
-        //  If timout is zero, exit immediately whether there are events or not.
-        if (timeout_ == 0)
-            break;
-
-        //  If there are events to return, we can exit immediately.
-        if (nevents)
-            break;
-
-        //  At this point we are meant to wait for events but there are none.
-        //  If timeout is infinite we can just loop until we get some events.
-        if (timeout_ < 0) {
-            if (first_pass)
-                first_pass = false;
-            continue;
-        }
-
-        //  The timeout is finite and there are no events. In the first pass
-        //  we get a timestamp of when the polling have begun. (We assume that
-        //  first pass have taken negligible time). We also compute the time
-        //  when the polling should time out.
-        if (first_pass) {
-            now = clock.now_ms ();
-            end = now + timeout_;
-            if (now == end)
-                break;
-            first_pass = false;
-            continue;
-        }
-
-        //  Find out whether timeout have expired.
-        now = clock.now_ms ();
-        if (now >= end)
-            break;
-    }
-
-    return nevents;
-
-#else
-    //  Exotic platforms that support neither poll() nor select().
-    errno = ENOTSUP;
-    return -1;
-#endif
+    
 }
 
 #if defined ZMQ_POLL_BASED_ON_SELECT
